@@ -10,7 +10,10 @@
 <body>
   <main class="page">
     <header>
-      <h1>Limpide</h1>
+      <div class="header-row">
+        <h1>Limpide</h1>
+        <a class="github-link" href="https://github.com/thepriben/limpide">GitHub</a>
+      </div>
       <p class="intro">
         Two tools: remove EXIF metadata from images, and convert HEIC/HEIF to JPEG.
         Processing runs locally in your browser. Files are not uploaded, stored, or sent to a server.
@@ -44,10 +47,6 @@
         <button type="button" id="heic-download" hidden>Download</button>
       </section>
     </div>
-
-    <footer>
-      <a href="https://github.com/thepriben/limpide">thepriben/limpide</a>
-    </footer>
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/heic-to@1.5.2/dist/iife/heic-to.js"></script>

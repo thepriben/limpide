@@ -4,9 +4,31 @@
  */
 
 const MIME_JPEG = "image/jpeg";
+const HEIC_CDN = "https://cdn.jsdelivr.net/npm/heic-to@1.5.2/dist/iife/heic-to.js";
 const DEFAULT_DROPZONE_LABEL = "Drop files here or click to browse";
 const EXIF_EXTENSIONS = new Set([".jpg", ".jpeg", ".png", ".webp"]);
 const HEIC_EXTENSIONS = new Set([".heic", ".heif"]);
+
+const ERROR_MESSAGES = [
+  ["Bibliothèque HEIC indisponible", "HEIC library failed to load. Please refresh the page."],
+  ["HEIC library unavailable", "HEIC library failed to load. Please refresh the page."],
+  ["ERR_LIBHEIF format not supported", "This HEIC file format is not supported."],
+  ["Could not read the image", "Could not read the image file."],
+  ["JPEG encoding failed", "JPEG encoding failed."],
+  ["ZIP library unavailable", "ZIP library failed to load. Please refresh the page."],
+];
+
+let heicLibraryPromise = null;
+
+function formatError(error) {
+  const message = error?.message || String(error);
+  for (const [needle, english] of ERROR_MESSAGES) {
+    if (message.includes(needle)) {
+      return english;
+    }
+  }
+  return message;
+}
 
 function setStatus(element, message, kind = "") {
   element.textContent = message;
@@ -64,6 +86,34 @@ function collectFilesFromInput(fileList, allowedExtensions, acceptAll = false) {
   return files.filter((file) => allowedExtensions.has(fileExtension(file.name)));
 }
 
+function loadScript(src) {
+  return new Promise((resolve, reject) => {
+    const script = document.createElement("script");
+    script.src = src;
+    script.async = true;
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error("HEIC library failed to load. Please refresh the page."));
+    document.head.appendChild(script);
+  });
+}
+
+async function ensureHeicLibrary() {
+  if (typeof HeicTo === "function") {
+    return HeicTo;
+  }
+
+  if (!heicLibraryPromise) {
+    heicLibraryPromise = loadScript(HEIC_CDN).then(() => {
+      if (typeof HeicTo !== "function") {
+        throw new Error("HEIC library failed to load. Please refresh the page.");
+      }
+      return HeicTo;
+    });
+  }
+
+  return heicLibraryPromise;
+}
+
 async function loadImageFromFile(file) {
   if (typeof createImageBitmap === "function") {
     return createImageBitmap(file);
@@ -74,7 +124,7 @@ async function loadImageFromFile(file) {
     const image = await new Promise((resolve, reject) => {
       const img = new Image();
       img.onload = () => resolve(img);
-      img.onerror = () => reject(new Error("Could not read the image."));
+      img.onerror = () => reject(new Error("Could not read the image file."));
       img.src = url;
     });
     return image;
@@ -110,31 +160,33 @@ async function stripExif(file) {
   }
 }
 
-async function isHeicFile(file) {
+async function isHeicFile(file, heicLibrary) {
   const extension = fileExtension(file.name);
   if (HEIC_EXTENSIONS.has(extension)) {
     return true;
   }
-  if (typeof HeicTo !== "undefined" && typeof HeicTo.isHeic === "function") {
-    return HeicTo.isHeic(file);
+  if (heicLibrary?.isHeic) {
+    return heicLibrary.isHeic(file);
   }
   return false;
 }
 
 async function convertHeicToJpeg(file) {
-  if (typeof HeicTo !== "function") {
-    throw new Error("HEIC library unavailable.");
-  }
+  const heicLibrary = await ensureHeicLibrary();
 
-  if (!(await isHeicFile(file))) {
+  if (!(await isHeicFile(file, heicLibrary))) {
     throw new Error(`Not a HEIC/HEIF file: ${file.name}`);
   }
 
-  return HeicTo({
-    blob: file,
-    type: MIME_JPEG,
-    quality: 0.95,
-  });
+  try {
+    return await heicLibrary({
+      blob: file,
+      type: MIME_JPEG,
+      quality: 0.95,
+    });
+  } catch (error) {
+    throw new Error(formatError(error));
+  }
 }
 
 async function processBatch(files, processor, outputSuffix, onProgress) {
@@ -159,7 +211,7 @@ async function downloadResults(results, zipName) {
   }
 
   if (typeof JSZip === "undefined") {
-    throw new Error("ZIP library unavailable.");
+    throw new Error("ZIP library failed to load. Please refresh the page.");
   }
 
   const zip = new JSZip();
@@ -172,6 +224,9 @@ async function downloadResults(results, zipName) {
 
 function wireDropzone(dropzone, input, onFiles) {
   dropzone.addEventListener("dragover", (event) => {
+    if (dropzone.classList.contains("disabled")) {
+      return;
+    }
     event.preventDefault();
     dropzone.classList.add("dragover");
   });
@@ -181,6 +236,9 @@ function wireDropzone(dropzone, input, onFiles) {
   });
 
   dropzone.addEventListener("drop", (event) => {
+    if (dropzone.classList.contains("disabled")) {
+      return;
+    }
     event.preventDefault();
     dropzone.classList.remove("dragover");
     if (event.dataTransfer?.files?.length) {
@@ -189,6 +247,9 @@ function wireDropzone(dropzone, input, onFiles) {
   });
 
   input.addEventListener("change", () => {
+    if (dropzone.classList.contains("disabled")) {
+      return;
+    }
     if (input.files?.length) {
       onFiles(input.files);
     }
@@ -221,7 +282,7 @@ function setupPanel({
     try {
       await downloadResults(results, zipName);
     } catch (error) {
-      setStatus(status, error.message || "Download failed.", "err");
+      setStatus(status, formatError(error), "err");
     }
   });
 
@@ -252,32 +313,47 @@ function setupPanel({
     } catch (error) {
       setDropzoneLabel(dropzone, DEFAULT_DROPZONE_LABEL, false);
       renderFileList(list, []);
-      setStatus(status, error.message || "Processing failed.", "err");
+      setStatus(status, formatError(error), "err");
     }
   });
 }
 
-setupPanel({
-  dropzoneId: "exif-dropzone",
-  inputId: "exif-input",
-  listId: "exif-files",
-  statusId: "exif-status",
-  downloadId: "exif-download",
-  allowedExtensions: EXIF_EXTENSIONS,
-  process: stripExif,
-  outputSuffix: ".clean.jpg",
-  zipName: "limpide-exif.zip",
-});
+async function init() {
+  setupPanel({
+    dropzoneId: "exif-dropzone",
+    inputId: "exif-input",
+    listId: "exif-files",
+    statusId: "exif-status",
+    downloadId: "exif-download",
+    allowedExtensions: EXIF_EXTENSIONS,
+    process: stripExif,
+    outputSuffix: ".clean.jpg",
+    zipName: "limpide-exif.zip",
+  });
 
-setupPanel({
-  dropzoneId: "heic-dropzone",
-  inputId: "heic-input",
-  listId: "heic-files",
-  statusId: "heic-status",
-  downloadId: "heic-download",
-  allowedExtensions: HEIC_EXTENSIONS,
-  acceptAll: true,
-  process: convertHeicToJpeg,
-  outputSuffix: ".jpg",
-  zipName: "limpide-heic.zip",
-});
+  setupPanel({
+    dropzoneId: "heic-dropzone",
+    inputId: "heic-input",
+    listId: "heic-files",
+    statusId: "heic-status",
+    downloadId: "heic-download",
+    allowedExtensions: HEIC_EXTENSIONS,
+    acceptAll: true,
+    process: convertHeicToJpeg,
+    outputSuffix: ".jpg",
+    zipName: "limpide-heic.zip",
+  });
+
+  const heicStatus = document.getElementById("heic-status");
+  try {
+    await ensureHeicLibrary();
+  } catch (error) {
+    const dropzone = document.getElementById("heic-dropzone");
+    const input = document.getElementById("heic-input");
+    dropzone.classList.add("disabled");
+    input.disabled = true;
+    setStatus(heicStatus, formatError(error), "err");
+  }
+}
+
+init();

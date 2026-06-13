@@ -8,13 +8,24 @@ body {
   font-size: 16px;
   line-height: 1.55;
   color: #222;
-  background: #fafafa;
+  background: #ececec;
+  padding: 1.5rem 1rem 2.5rem;
 }
 
 .page {
   max-width: 48rem;
   margin: 0 auto;
-  padding: 2.5rem 1.25rem 3rem;
+  padding: 1.75rem 1.5rem 2rem;
+  background: #fff;
+  border: 1px solid #bbb;
+}
+
+.header-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
 }
 
 header {
@@ -24,14 +35,25 @@ header {
 }
 
 header h1 {
-  margin: 0 0 0.75rem;
+  margin: 0;
   font-size: 1.5rem;
   font-weight: 600;
 }
 
+.github-link {
+  flex-shrink: 0;
+  font-size: 0.8125rem;
+  color: #444;
+  text-decoration: none;
+}
+
+.github-link:hover {
+  color: #000;
+  text-decoration: underline;
+}
+
 .intro {
   margin: 0;
-  max-width: 40rem;
   color: #444;
   font-size: 0.9375rem;
 }
@@ -53,7 +75,7 @@ header h1 {
 
 .tool {
   padding: 1rem;
-  background: #fff;
+  background: #fafafa;
   border: 1px solid #ddd;
 }
 
@@ -76,7 +98,7 @@ header h1 {
   min-height: 6rem;
   padding: 0.75rem;
   border: 1px dashed #ccc;
-  background: #fafafa;
+  background: #fff;
   text-align: center;
   cursor: pointer;
 }
@@ -88,6 +110,11 @@ header h1 {
 
 .dropzone.has-file {
   border-style: solid;
+}
+
+.dropzone.disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .dropzone-label {
@@ -137,19 +164,4 @@ button {
 
 button:hover {
   border-color: #888;
-}
-
-footer {
-  margin-top: 2.5rem;
-  padding-top: 1.25rem;
-  border-top: 1px solid #ddd;
-  font-size: 0.8125rem;
-}
-
-footer a {
-  color: #444;
-}
-
-footer a:hover {
-  color: #000;
 }
