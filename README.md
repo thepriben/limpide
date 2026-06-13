@@ -1,6 +1,6 @@
 #### *Limpide*
 
-Strip EXIF metadata and convert HEIC to JPEG.
+View EXIF metadata, strip it from images, and convert HEIC to JPEG.
 
 **Site: [thepriben.github.io/limpide](https://thepriben.github.io/limpide/)**
 
@@ -8,14 +8,20 @@ Strip EXIF metadata and convert HEIC to JPEG.
 
 ##### About
 
-**Features**
+Limpide is a small, open-source toolkit for image metadata and format conversion.
 
-- `strip-exif` — remove embedded metadata from an image (GPS, camera model, timestamps, etc.)
-- `convert-heic` — convert a HEIC/HEIF file to JPEG
+**Web app** (browser, no upload)
 
-**Why open source**
+- **View EXIF** — inspect embedded metadata (camera, GPS, dates, etc.)
+- **Strip EXIF** — remove metadata by local re-encode
+- **HEIC to JPEG** — convert Apple HEIC/HEIF files
 
-The web app processes files in the browser. There is no upload endpoint, no database, and no server-side storage. Processing is implemented in `web/app.js` (canvas re-encode for EXIF, `heic-to` for HEIC) and can be reviewed directly. A Python CLI in `limpide/` provides the same functions for local or batch use.
+Processing runs entirely in the browser. There is no upload endpoint, no database, and no server-side storage. The logic lives in `web/app.js` and can be reviewed directly.
+
+**CLI** (Python, local or batch)
+
+- `strip-exif` — remove EXIF from JPEG, PNG, WebP, TIFF
+- `convert-heic` — convert HEIC/HEIF to JPEG
 
 ##### Structure
 

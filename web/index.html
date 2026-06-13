@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Strip EXIF metadata and convert HEIC to JPEG in your browser. Open source, nothing uploaded.">
-  <title>Limpide — Strip EXIF, Convert HEIC to JPEG</title>
+  <meta name="description" content="View, strip EXIF metadata and convert HEIC to JPEG in your browser. Open source, nothing uploaded.">
+  <title>Limpide — EXIF viewer, stripper, HEIC to JPEG</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -15,7 +15,7 @@
         <a class="github-link" href="https://github.com/thepriben/limpide">GitHub</a>
       </div>
       <p class="intro">
-        Two tools: remove EXIF metadata from images, and convert HEIC/HEIF to JPEG.
+        View EXIF metadata, remove it from images, or convert HEIC/HEIF to JPEG.
         Processing runs locally in your browser. Files are not uploaded, stored, or sent to a server.
         The <a href="https://github.com/thepriben/limpide/blob/main/web/app.js">source code</a>
         is public and can be audited to confirm this behavior.
@@ -23,6 +23,17 @@
     </header>
 
     <div class="tools">
+      <section class="tool tool-wide">
+        <h2>View EXIF</h2>
+        <p class="hint">JPEG, PNG, WebP, HEIC · one file at a time</p>
+        <label class="dropzone" id="view-dropzone">
+          <input type="file" id="view-input" accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.jpg,.jpeg,.png,.webp,.heic,.heif" hidden>
+          <span class="dropzone-label">Drop a file here or click to browse</span>
+        </label>
+        <p class="status" id="view-status" aria-live="polite"></p>
+        <dl class="meta-table" id="view-meta" hidden></dl>
+      </section>
+
       <section class="tool">
         <h2>Strip EXIF</h2>
         <p class="hint">JPEG, PNG, WebP · multiple files</p>
@@ -49,6 +60,7 @@
     </div>
   </main>
 
+  <script src="https://cdn.jsdelivr.net/npm/exifr@7.1.3/dist/lite.umd.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/heic-to@1.5.2/dist/iife/heic-to.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
   <script src="app.js"></script>

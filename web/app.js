@@ -6,6 +6,25 @@
 const MIME_JPEG = "image/jpeg";
 const HEIC_CDN = "https://cdn.jsdelivr.net/npm/heic-to@1.5.2/dist/iife/heic-to.js";
 const DEFAULT_DROPZONE_LABEL = "Drop files here or click to browse";
+const VIEWER_EXTENSIONS = new Set([".jpg", ".jpeg", ".png", ".webp", ".heic", ".heif"]);
+const VIEWER_LABELS = {
+  Make: "Camera make",
+  Model: "Camera model",
+  DateTimeOriginal: "Date taken",
+  CreateDate: "Created",
+  ModifyDate: "Modified",
+  ExposureTime: "Exposure",
+  FNumber: "Aperture",
+  ISO: "ISO",
+  FocalLength: "Focal length",
+  LensModel: "Lens",
+  Software: "Software",
+  ImageWidth: "Width",
+  ImageHeight: "Height",
+  Orientation: "Orientation",
+  GPSLatitude: "Latitude",
+  GPSLongitude: "Longitude",
+};
 const EXIF_EXTENSIONS = new Set([".jpg", ".jpeg", ".png", ".webp"]);
 const HEIC_EXTENSIONS = new Set([".heic", ".heif"]);
 
@@ -222,6 +241,109 @@ async function downloadResults(results, zipName) {
   downloadBlob(zipBlob, zipName);
 }
 
+function formatMetadataValue(value) {
+  if (value === null || value === undefined) {
+    return "";
+  }
+  if (typeof value === "number") {
+    return Number.isInteger(value) ? String(value) : value.toFixed(2).replace(/\.?0+$/, "");
+  }
+  if (value instanceof Date) {
+    return value.toISOString().replace("T", " ").replace(/\.\d{3}Z$/, " UTC");
+  }
+  if (typeof value === "object") {
+    return JSON.stringify(value);
+  }
+  return String(value);
+}
+
+function renderMetadataTable(tableElement, rows) {
+  tableElement.innerHTML = "";
+  if (!rows.length) {
+    tableElement.hidden = true;
+    return;
+  }
+
+  for (const [label, value] of rows) {
+    const term = document.createElement("dt");
+    term.textContent = label;
+    const detail = document.createElement("dd");
+    detail.textContent = value;
+    tableElement.appendChild(term);
+    tableElement.appendChild(detail);
+  }
+  tableElement.hidden = false;
+}
+
+async function readExifMetadata(file) {
+  if (typeof exifr === "undefined") {
+    throw new Error("EXIF library failed to load. Please refresh the page.");
+  }
+
+  const metadata = await exifr.parse(file, { tiff: true, ifd0: true, exif: true, gps: true });
+  const rows = [];
+
+  if (metadata && typeof metadata === "object") {
+    for (const [key, value] of Object.entries(metadata)) {
+      if (value === undefined || value === null || key.startsWith("_")) {
+        continue;
+      }
+      const label = VIEWER_LABELS[key] || key;
+      rows.push([label, formatMetadataValue(value)]);
+    }
+  }
+
+  try {
+    const gps = await exifr.gps(file);
+    if (gps?.latitude !== undefined && gps?.longitude !== undefined) {
+      rows.push(["Latitude", formatMetadataValue(gps.latitude)]);
+      rows.push(["Longitude", formatMetadataValue(gps.longitude)]);
+    }
+  } catch {
+    // GPS not available for this file.
+  }
+
+  rows.sort((a, b) => a[0].localeCompare(b[0]));
+  return rows;
+}
+
+function setupExifViewer() {
+  const dropzone = document.getElementById("view-dropzone");
+  const input = document.getElementById("view-input");
+  const status = document.getElementById("view-status");
+  const table = document.getElementById("view-meta");
+
+  wireDropzone(dropzone, input, async (fileList) => {
+    const files = collectFilesFromInput(fileList, VIEWER_EXTENSIONS);
+    input.value = "";
+    table.hidden = true;
+    table.innerHTML = "";
+
+    if (!files.length) {
+      setDropzoneLabel(dropzone, "Drop a file here or click to browse", false);
+      setStatus(status, "No supported files selected.", "err");
+      return;
+    }
+
+    const file = files[0];
+    setDropzoneLabel(dropzone, file.name, true);
+    setStatus(status, "Reading metadata…");
+
+    try {
+      const rows = await readExifMetadata(file);
+      if (!rows.length) {
+        setStatus(status, "No EXIF metadata found.", "ok");
+        return;
+      }
+      renderMetadataTable(table, rows);
+      setStatus(status, `${rows.length} field${rows.length > 1 ? "s" : ""} found.`, "ok");
+    } catch (error) {
+      setDropzoneLabel(dropzone, "Drop a file here or click to browse", false);
+      setStatus(status, formatError(error), "err");
+    }
+  });
+}
+
 function wireDropzone(dropzone, input, onFiles) {
   dropzone.addEventListener("dragover", (event) => {
     if (dropzone.classList.contains("disabled")) {
@@ -319,6 +441,8 @@ function setupPanel({
 }
 
 async function init() {
+  setupExifViewer();
+
   setupPanel({
     dropzoneId: "exif-dropzone",
     inputId: "exif-input",

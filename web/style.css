@@ -13,7 +13,7 @@ body {
 }
 
 .page {
-  max-width: 48rem;
+  max-width: 52rem;
   margin: 0 auto;
   padding: 1.75rem 1.5rem 2rem;
   background: #fff;
@@ -65,12 +65,6 @@ header h1 {
 .tools {
   display: grid;
   gap: 1.25rem;
-}
-
-@media (min-width: 600px) {
-  .tools {
-    grid-template-columns: 1fr 1fr;
-  }
 }
 
 .tool {
@@ -134,6 +128,45 @@ header h1 {
 
 .file-list li + li {
   margin-top: 0.15rem;
+}
+
+@media (min-width: 700px) {
+  .tools {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .tool-wide {
+    grid-column: 1 / -1;
+  }
+}
+
+.tool-wide .dropzone {
+  min-height: 4.5rem;
+}
+
+.meta-table {
+  margin: 0.75rem 0 0;
+  padding: 0;
+  font-size: 0.8125rem;
+  border-top: 1px solid #ddd;
+}
+
+.meta-table dt {
+  margin: 0.55rem 0 0.1rem;
+  color: #666;
+  font-weight: 500;
+}
+
+.meta-table dd {
+  margin: 0;
+  color: #222;
+  word-break: break-word;
+}
+
+.meta-empty {
+  margin: 0.75rem 0 0;
+  font-size: 0.8125rem;
+  color: #666;
 }
 
 .status {
