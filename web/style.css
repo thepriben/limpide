@@ -1,130 +1,112 @@
-:root {
-  --limpide-bg: #f4f8fb;
-  --limpide-ink: #1a2b33;
-  --limpide-accent: #2a9d8f;
-  --limpide-accent-soft: #d7f0ec;
-  --limpide-card: #ffffff;
-  --limpide-border: #c8dde6;
+* {
+  box-sizing: border-box;
 }
 
 body {
-  background:
-    radial-gradient(circle at top left, var(--limpide-accent-soft), transparent 45%),
-    var(--limpide-bg);
-  color: var(--limpide-ink);
-}
-
-.container {
-  max-width: 920px;
-  padding-top: 2rem;
-  padding-bottom: 3rem;
-}
-
-.hero {
-  text-align: center;
-  margin-bottom: 2rem;
-}
-
-.eyebrow {
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  font-size: 0.75rem;
-  color: var(--limpide-accent);
-  margin-bottom: 0.5rem;
-}
-
-.hero h1 {
-  font-size: clamp(2.5rem, 8vw, 4rem);
-  margin-bottom: 0.5rem;
-  font-weight: 700;
-}
-
-.lead {
-  font-size: 1.05rem;
-  max-width: 42rem;
-  margin: 0 auto;
-}
-
-.card {
-  background: var(--limpide-card);
-  border: 1px solid var(--limpide-border);
-  border-radius: 1rem;
-  padding: 1.25rem 1.5rem;
-  box-shadow: 0 10px 30px rgba(26, 43, 51, 0.05);
-}
-
-.proof {
-  margin-bottom: 1.5rem;
-}
-
-.proof-list {
   margin: 0;
-  padding-left: 1.2rem;
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+  color: #222;
+  background: #fafafa;
 }
 
-.proof-list li + li {
-  margin-top: 0.4rem;
+.page {
+  max-width: 32rem;
+  margin: 0 auto;
+  padding: 2.5rem 1.25rem 3rem;
 }
 
-.grid {
-  display: grid;
-  gap: 1.25rem;
+header {
+  margin-bottom: 2.5rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid #ddd;
 }
 
-@media (min-width: 768px) {
-  .grid {
-    grid-template-columns: 1fr 1fr;
-  }
+header h1 {
+  margin: 0 0 0.25rem;
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+header p {
+  margin: 0;
+  color: #666;
+  font-size: 0.95rem;
+}
+
+.tool + .tool {
+  margin-top: 2rem;
+}
+
+.tool h2 {
+  margin: 0 0 0.15rem;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.hint {
+  margin: 0 0 0.75rem;
+  color: #666;
+  font-size: 0.875rem;
 }
 
 .dropzone {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 8rem;
-  border: 2px dashed var(--limpide-border);
-  border-radius: 0.75rem;
-  background: var(--limpide-bg);
-  cursor: pointer;
+  display: block;
+  padding: 1.25rem;
+  border: 1px solid #ccc;
+  background: #fff;
   text-align: center;
-  padding: 1rem;
-  transition: border-color 0.2s, background 0.2s;
+  font-size: 0.9rem;
+  color: #444;
+  cursor: pointer;
 }
 
 .dropzone:hover,
 .dropzone.dragover {
-  border-color: var(--limpide-accent);
-  background: var(--limpide-accent-soft);
+  border-color: #888;
 }
 
 .status {
-  min-height: 1.4rem;
-  font-size: 0.9rem;
-  margin: 0.75rem 0 0.5rem;
+  min-height: 1.25rem;
+  margin: 0.6rem 0 0;
+  font-size: 0.875rem;
+  color: #666;
 }
 
 .status.ok {
-  color: var(--limpide-accent);
+  color: #333;
 }
 
 .status.err {
-  color: #c0392b;
+  color: #a33;
+}
+
+button {
+  margin-top: 0.5rem;
+  padding: 0.45rem 0.9rem;
+  border: 1px solid #ccc;
+  background: #fff;
+  font: inherit;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+button:hover {
+  border-color: #888;
 }
 
 footer {
-  margin-top: 2rem;
-  text-align: center;
-  font-size: 0.9rem;
-  color: #4d6570;
+  margin-top: 3rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #ddd;
+  font-size: 0.875rem;
 }
 
-footer p {
-  margin: 0.35rem 0;
+footer a {
+  color: #444;
 }
 
-button#exif-download,
-button#heic-download {
-  width: 100%;
-  border-color: var(--limpide-accent);
-  color: var(--limpide-accent);
+footer a:hover {
+  color: #000;
 }

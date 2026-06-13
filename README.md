@@ -1,40 +1,38 @@
-#### *Limpide — photos nettoyées, rien gardé*
+#### *Limpide*
 
-Effacement EXIF et conversion HEIC → JPEG, avec une preuve vérifiable : **le site web traite tout dans le navigateur**, sans upload ni stockage. Le code est ouvert — on peut auditer chaque ligne.
+Effacement des métadonnées EXIF et conversion HEIC → JPEG. Site web et CLI Python.
 
-**Site en ligne : [thepriben.github.io/limpide](https://thepriben.github.io/limpide/)**
+**Site : [thepriben.github.io/limpide](https://thepriben.github.io/limpide/)**
 
 ---
 
-##### Pourquoi « Limpide » ?
+##### About
 
-- **Limpide** = transparent (processus auditable) et net (métadonnées retirées) ;
-- le site démontre qu'on ne garde rien à aucun point : pas de serveur de traitement, pas de base, pas de fichier temporaire distant.
+Limpide propose deux fonctions simples :
 
-##### Fonctions
+- **strip-exif** — retire les métadonnées embarquées dans une image (GPS, appareil, date, etc.) ;
+- **convert-heic** — convertit un fichier HEIC/HEIF (iPhone, appareils Apple) en JPEG.
 
-| Outil | Rôle |
+Le site web traite les fichiers **dans le navigateur** : rien n'est envoyé à un serveur, rien n'est stocké. Le code source est public ; le traitement est décrit dans `web/app.js` (canvas pour l'EXIF, `heic2any` pour le HEIC). Une CLI Python reprend les mêmes fonctions pour un usage local ou par lot.
+
+##### Structure
+
+| Composant | Rôle |
 |---|---|
-| **Site web** (`web/`) | EXIF + HEIC → JPEG, 100 % client-side |
-| **CLI** (`limpide`) | Même logique en local, pour scripts et lots |
+| `web/` | Interface sobre, 100 % client-side, déployée sur GitHub Pages |
+| `limpide/` | CLI Python (Pillow, pillow-heif) |
 
-##### Site web (démo publique)
+##### Site web
 
-**[https://thepriben.github.io/limpide/](https://thepriben.github.io/limpide/)** — déployé via GitHub Pages à chaque push sur `main`.
-
-En local :
+Déployé automatiquement sur GitHub Pages à chaque push sur `main`.
 
 ```
-# depuis la racine du dépôt
 python -m http.server 8080 --directory web
-# → http://localhost:8080
 ```
-
-Le traitement est dans `web/app.js` : canvas pour l'EXIF, `heic2any` pour le HEIC. Aucun `fetch` des fichiers utilisateur.
 
 ##### CLI
 
-Prérequis : Python 3.10+
+Python 3.10+
 
 ```
 pip install -e .
@@ -42,10 +40,10 @@ pip install -e .
 
 ```
 limpide strip-exif photo.jpg
-limpide strip-exif ./vacances/ -d ./vacances-clean/
+limpide strip-exif ./dossier/ -d ./sortie/
 
-limpide convert-heic IMG_0001.HEIC
-limpide convert-heic ./iphone/ -d ./jpeg/
+limpide convert-heic photo.heic
+limpide convert-heic ./dossier/ -d ./sortie/
 ```
 
 ##### Tests
