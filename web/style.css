@@ -6,73 +6,65 @@ body {
   margin: 0;
   font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
   font-size: 16px;
-  line-height: 1.5;
-  color: #1a1a1a;
-  background: #f6f6f6;
+  line-height: 1.55;
+  color: #222;
+  background: #fafafa;
 }
 
 .page {
-  max-width: 52rem;
+  max-width: 48rem;
   margin: 0 auto;
-  padding: 3rem 1.5rem 4rem;
+  padding: 2.5rem 1.25rem 3rem;
 }
 
 header {
-  margin-bottom: 2.5rem;
-  padding-bottom: 1.75rem;
+  margin-bottom: 2rem;
+  padding-bottom: 1.5rem;
   border-bottom: 1px solid #ddd;
 }
 
 header h1 {
-  margin: 0 0 0.35rem;
-  font-size: 1.75rem;
+  margin: 0 0 0.75rem;
+  font-size: 1.5rem;
   font-weight: 600;
-  letter-spacing: -0.02em;
 }
 
-.tagline {
+.intro {
   margin: 0;
-  color: #333;
-  font-size: 1rem;
+  max-width: 40rem;
+  color: #444;
+  font-size: 0.9375rem;
 }
 
-.note {
-  margin: 0.5rem 0 0;
-  color: #666;
-  font-size: 0.875rem;
+.intro a {
+  color: #222;
 }
 
 .tools {
   display: grid;
-  gap: 1.5rem;
+  gap: 1.25rem;
 }
 
-@media (min-width: 640px) {
+@media (min-width: 600px) {
   .tools {
     grid-template-columns: 1fr 1fr;
   }
 }
 
 .tool {
-  padding: 1.25rem;
+  padding: 1rem;
   background: #fff;
   border: 1px solid #ddd;
 }
 
-.tool-head {
-  margin-bottom: 1rem;
-}
-
 .tool h2 {
   margin: 0;
-  font-size: 0.95rem;
+  font-size: 0.9375rem;
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
 }
 
 .hint {
-  margin: 0.2rem 0 0;
+  margin: 0.15rem 0 0.75rem;
   color: #666;
   font-size: 0.8125rem;
 }
@@ -81,35 +73,32 @@ header h1 {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 7rem;
-  padding: 1rem;
-  border: 1px dashed #bbb;
+  min-height: 6rem;
+  padding: 0.75rem;
+  border: 1px dashed #ccc;
   background: #fafafa;
   text-align: center;
   cursor: pointer;
-  transition: border-color 0.15s, background 0.15s;
 }
 
 .dropzone:hover,
 .dropzone.dragover {
-  border-color: #666;
-  background: #f0f0f0;
+  border-color: #999;
 }
 
 .dropzone.has-file {
   border-style: solid;
-  border-color: #ccc;
 }
 
 .dropzone-label {
-  font-size: 0.875rem;
-  color: #444;
+  font-size: 0.8125rem;
+  color: #555;
   word-break: break-all;
 }
 
 .status {
-  min-height: 1.25rem;
-  margin: 0.75rem 0 0;
+  min-height: 1.2rem;
+  margin: 0.6rem 0 0;
   font-size: 0.8125rem;
   color: #666;
 }
@@ -119,42 +108,35 @@ header h1 {
 }
 
 .status.err {
-  color: #b33;
+  color: #a33;
 }
 
 button {
   width: 100%;
-  margin-top: 0.75rem;
-  padding: 0.5rem 1rem;
-  border: 1px solid #333;
-  background: #1a1a1a;
-  color: #fff;
+  margin-top: 0.6rem;
+  padding: 0.45rem 0.75rem;
+  border: 1px solid #bbb;
+  background: #fff;
   font: inherit;
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   cursor: pointer;
 }
 
 button:hover {
-  background: #333;
+  border-color: #888;
 }
 
 footer {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.35rem 0.5rem;
-  align-items: center;
-  margin-top: 3rem;
-  padding-top: 1.5rem;
+  margin-top: 2.5rem;
+  padding-top: 1.25rem;
   border-top: 1px solid #ddd;
   font-size: 0.8125rem;
-  color: #666;
 }
 
 footer a {
-  color: #333;
-  text-decoration: none;
+  color: #444;
 }
 
 footer a:hover {
-  text-decoration: underline;
+  color: #000;
 }

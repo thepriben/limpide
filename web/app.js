@@ -4,7 +4,7 @@
  */
 
 const MIME_JPEG = "image/jpeg";
-const DEFAULT_DROPZONE_LABEL = "Drop a file or click to browse";
+const DEFAULT_DROPZONE_LABEL = "Choose a file";
 
 function setStatus(element, message, kind = "") {
   element.textContent = message;
@@ -139,7 +139,7 @@ function setupPanel({ dropzoneId, inputId, statusId, downloadId, process, output
     download.hidden = true;
     resultBlob = null;
     setDropzoneLabel(dropzone, file.name, true);
-    setStatus(status, "Processing locally…");
+      setStatus(status, "Processing…");
 
     try {
       resultBlob = await process(file);
@@ -160,7 +160,7 @@ setupPanel({
   downloadId: "exif-download",
   process: stripExif,
   outputSuffix: ".clean.jpg",
-  readyMessage: "EXIF removed — ready to download.",
+  readyMessage: "Ready to download.",
 });
 
 setupPanel({
@@ -170,5 +170,5 @@ setupPanel({
   downloadId: "heic-download",
   process: convertHeicToJpeg,
   outputSuffix: ".jpg",
-  readyMessage: "Converted — ready to download.",
+  readyMessage: "Ready to download.",
 });

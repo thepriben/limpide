@@ -1,30 +1,30 @@
 #### *Limpide*
 
-Strip EXIF metadata and convert HEIC to JPEG. Web app and Python CLI.
+Strip EXIF metadata and convert HEIC to JPEG.
 
-**Live site: [thepriben.github.io/limpide](https://thepriben.github.io/limpide/)**
+**Site: [thepriben.github.io/limpide](https://thepriben.github.io/limpide/)**
 
 ---
 
 ##### About
 
-Limpide provides two functions:
+**Features**
 
-- **strip-exif** — remove embedded metadata from an image (GPS, camera model, timestamps, etc.) ;
-- **convert-heic** — convert a HEIC/HEIF file (iPhone, Apple devices) to JPEG.
+- `strip-exif` — remove embedded metadata from an image (GPS, camera model, timestamps, etc.)
+- `convert-heic` — convert a HEIC/HEIF file to JPEG
 
-The web app processes files **in the browser**: nothing is uploaded, nothing is stored. Source code is public; processing lives in `web/app.js` (canvas for EXIF, `heic2any` for HEIC). A Python CLI offers the same features for local or batch use.
+**Why open source**
+
+The web app processes files in the browser. There is no upload endpoint, no database, and no server-side storage. Processing is implemented in `web/app.js` (canvas re-encode for EXIF, `heic2any` for HEIC) and can be reviewed directly. A Python CLI in `limpide/` provides the same functions for local or batch use.
 
 ##### Structure
 
-| Component | Role |
+| Path | Description |
 |---|---|
-| `web/` | Minimal client-side UI, deployed on GitHub Pages |
+| `web/` | Client-side UI (GitHub Pages) |
 | `limpide/` | Python CLI (Pillow, pillow-heif) |
 
 ##### Web app
-
-Deployed automatically to GitHub Pages on every push to `main`.
 
 ```
 python -m http.server 8080 --directory web
