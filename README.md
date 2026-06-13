@@ -14,14 +14,14 @@ Limpide is a small, open-source toolkit for image metadata and format conversion
 
 - **View EXIF** — inspect embedded metadata (camera, GPS, dates, etc.)
 - **Strip EXIF** — remove camera EXIF, GPS, ICC color profile, and JFIF metadata
-- **HEIC to JPEG** — convert Apple HEIC/HEIF files
+- **HEIC to JPEG** — convert Apple HEIC/HEIF files (EXIF and GPS preserved)
 
 Processing runs entirely in the browser. There is no upload endpoint, no database, and no server-side storage. The logic lives in `web/app.js` and can be reviewed directly.
 
 **CLI** (Python, local or batch)
 
 - `strip-exif` — remove EXIF from JPEG, PNG, WebP, TIFF
-- `convert-heic` — convert HEIC/HEIF to JPEG
+- `convert-heic` — convert HEIC/HEIF to JPEG (preserves EXIF and GPS)
 
 ##### Structure
 

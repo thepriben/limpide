@@ -5,6 +5,8 @@
 
 const MIME_JPEG = "image/jpeg";
 const HEIC_CDN = "https://cdn.jsdelivr.net/npm/heic-to@1.5.2/dist/iife/heic-to.js";
+const EXIFREADER_CDN = "https://cdn.jsdelivr.net/npm/exifreader@4.36.2/dist/exif-reader.js";
+const PIEXIF_CDN = "https://cdn.jsdelivr.net/npm/piexifjs@1.0.6/piexif.js";
 const DEFAULT_DROPZONE_LABEL = "Drop files here or click to browse";
 const VIEWER_EXTENSIONS = new Set([".jpg", ".jpeg", ".png", ".webp", ".heic", ".heif"]);
 const VIEWER_PRIORITY = [
@@ -15,6 +17,11 @@ const VIEWER_PRIORITY = [
   "DateTimeOriginal",
   "CreateDate",
   "ModifyDate",
+  "Latitude",
+  "Longitude",
+  "Altitude",
+  "GPSDateStamp",
+  "GPSTimeStamp",
   "ExposureTime",
   "FNumber",
   "ISO",
@@ -30,8 +37,6 @@ const VIEWER_SKIP = new Set([
   "GPSLatitude",
   "GPSLongitude",
   "GPSAltitude",
-  "GPSDateStamp",
-  "GPSTimeStamp",
   "MakerNote",
   "UserComment",
   "thumbnail",
@@ -68,6 +73,11 @@ const VIEWER_LABELS = {
   DateTimeOriginal: "Date taken",
   CreateDate: "Created",
   ModifyDate: "Modified",
+  Latitude: "Latitude",
+  Longitude: "Longitude",
+  Altitude: "Altitude",
+  GPSDateStamp: "GPS date",
+  GPSTimeStamp: "GPS time",
   ExposureTime: "Exposure",
   FNumber: "Aperture",
   ISO: "ISO",
@@ -93,6 +103,23 @@ const ERROR_MESSAGES = [
 ];
 
 let heicLibraryPromise = null;
+let exifReaderPromise = null;
+let piexifPromise = null;
+
+const PIEXIF_IFD_MAP = {
+  Image: "0th",
+  Exif: "Exif",
+  GPS: "GPS",
+};
+
+const PIEXIF_SKIP_NAMES = new Set([
+  "Exif IFD Pointer",
+  "GPS Info IFD Pointer",
+  "Interop IFD Pointer",
+  "ComponentsConfiguration",
+  "MakerNote",
+  "UserComment",
+]);
 
 function formatError(error) {
   const message = error?.message || String(error);
@@ -160,13 +187,13 @@ function collectFilesFromInput(fileList, allowedExtensions, acceptAll = false) {
   return files.filter((file) => allowedExtensions.has(fileExtension(file.name)));
 }
 
-function loadScript(src) {
+function loadScript(src, errorMessage) {
   return new Promise((resolve, reject) => {
     const script = document.createElement("script");
     script.src = src;
     script.async = true;
     script.onload = () => resolve();
-    script.onerror = () => reject(new Error("HEIC library failed to load. Please refresh the page."));
+    script.onerror = () => reject(new Error(errorMessage));
     document.head.appendChild(script);
   });
 }
@@ -177,7 +204,10 @@ async function ensureHeicLibrary() {
   }
 
   if (!heicLibraryPromise) {
-    heicLibraryPromise = loadScript(HEIC_CDN).then(() => {
+    heicLibraryPromise = loadScript(
+      HEIC_CDN,
+      "HEIC library failed to load. Please refresh the page.",
+    ).then(() => {
       if (typeof HeicTo !== "function") {
         throw new Error("HEIC library failed to load. Please refresh the page.");
       }
@@ -323,11 +353,12 @@ async function convertHeicToJpeg(file) {
   }
 
   try {
-    return await heicLibrary({
+    const jpegBlob = await heicLibrary({
       blob: file,
       type: MIME_JPEG,
       quality: 0.95,
     });
+    return injectExifIntoConvertedJpeg(file, jpegBlob);
   } catch (error) {
     throw new Error(formatError(error));
   }
@@ -408,52 +439,219 @@ function getExifr() {
   return globalThis.exifr;
 }
 
-async function fileForExifReading(file) {
-  const extension = fileExtension(file.name);
-  const looksHeic = HEIC_EXTENSIONS.has(extension);
-
-  if (!looksHeic && typeof HeicTo === "function" && typeof HeicTo.isHeic === "function") {
-    try {
-      if (await HeicTo.isHeic(file)) {
-        const heicLibrary = await ensureHeicLibrary();
-        return heicLibrary({ blob: file, type: MIME_JPEG, quality: 0.95 });
-      }
-    } catch {
-      // Fall back to reading the original file.
-    }
-  }
-
-  if (looksHeic) {
-    const heicLibrary = await ensureHeicLibrary();
-    return heicLibrary({ blob: file, type: MIME_JPEG, quality: 0.95 });
-  }
-
-  return file;
+function getExifReader() {
+  return globalThis.ExifReader;
 }
 
-async function readExifMetadata(file) {
-  const exifr = getExifr();
-  if (!exifr?.parse) {
-    throw new Error("EXIF library failed to load. Please refresh the page.");
+function getPiexif() {
+  return globalThis.piexif;
+}
+
+async function ensureExifReader() {
+  const existing = getExifReader();
+  if (existing?.load) {
+    return existing;
   }
 
-  const source = await fileForExifReading(file);
-  const metadata = await exifr.parse(source, true);
+  if (!exifReaderPromise) {
+    exifReaderPromise = loadScript(
+      EXIFREADER_CDN,
+      "EXIF fallback library failed to load. Please refresh the page.",
+    ).then(() => {
+      const library = getExifReader();
+      if (!library?.load) {
+        throw new Error("EXIF fallback library failed to load. Please refresh the page.");
+      }
+      return library;
+    });
+  }
+
+  return exifReaderPromise;
+}
+
+async function ensurePiexif() {
+  const existing = getPiexif();
+  if (existing?.insert && existing?.dump) {
+    return existing;
+  }
+
+  if (!piexifPromise) {
+    piexifPromise = loadScript(
+      PIEXIF_CDN,
+      "EXIF injection library failed to load. Please refresh the page.",
+    ).then(() => {
+      const library = getPiexif();
+      if (!library?.insert || !library?.dump) {
+        throw new Error("EXIF injection library failed to load. Please refresh the page.");
+      }
+      return library;
+    });
+  }
+
+  return piexifPromise;
+}
+
+function buildPiexifNameMap(piexif) {
+  const nameMap = new Map();
+
+  for (const [ifdKey, ifdName] of Object.entries(PIEXIF_IFD_MAP)) {
+    for (const [id, meta] of Object.entries(piexif.TAGS[ifdKey] ?? {})) {
+      nameMap.set(meta.name, { ifd: ifdName, id: Number(id) });
+    }
+  }
+
+  return nameMap;
+}
+
+function buildPiexifFromExifReader(tags, piexif) {
+  const nameMap = buildPiexifNameMap(piexif);
+  const exifObj = { "0th": {}, Exif: {}, GPS: {}, "1st": {}, thumbnail: null };
+
+  for (const [name, tag] of Object.entries(tags.exif ?? {})) {
+    const mapping = nameMap.get(name);
+    if (!mapping || PIEXIF_SKIP_NAMES.has(name)) {
+      continue;
+    }
+
+    const value = tag?.value ?? tag?.description;
+    if (value === undefined || value === null) {
+      continue;
+    }
+
+    exifObj[mapping.ifd][mapping.id] = value;
+  }
+
+  const gps = tags.gps ?? null;
+  if (gps?.Latitude !== undefined && gps?.Longitude !== undefined && !exifObj.GPS[2]) {
+    exifObj.GPS[2] = piexif.GPSHelper.degToDmsRational(Math.abs(gps.Latitude));
+    exifObj.GPS[1] = gps.Latitude >= 0 ? "N" : "S";
+    exifObj.GPS[4] = piexif.GPSHelper.degToDmsRational(Math.abs(gps.Longitude));
+    exifObj.GPS[3] = gps.Longitude >= 0 ? "E" : "W";
+
+    if (gps.Altitude !== undefined) {
+      exifObj.GPS[6] = [Math.round(Math.abs(gps.Altitude) * 100), 100];
+      exifObj.GPS[5] = gps.Altitude >= 0 ? 0 : 1;
+    }
+  }
+
+  const hasMetadata =
+    Object.keys(exifObj["0th"]).length ||
+    Object.keys(exifObj.Exif).length ||
+    Object.keys(exifObj.GPS).length;
+
+  return hasMetadata ? exifObj : null;
+}
+
+async function injectExifIntoConvertedJpeg(sourceFile, jpegBlob) {
+  try {
+    const [ExifReader, piexif] = await Promise.all([ensureExifReader(), ensurePiexif()]);
+    const sourceBuffer = await sourceFile.arrayBuffer();
+    const tags = ExifReader.load(sourceBuffer, { expanded: true });
+    const exifObj = buildPiexifFromExifReader(tags, piexif);
+    if (!exifObj) {
+      return jpegBlob;
+    }
+
+    const jpegBuffer = await jpegBlob.arrayBuffer();
+    const exifBytes = piexif.dump(exifObj);
+    const jpegBinary = new Uint8Array(jpegBuffer);
+    let binaryString = "";
+    for (const byte of jpegBinary) {
+      binaryString += String.fromCharCode(byte);
+    }
+
+    const withExifBinary = piexif.insert(exifBytes, binaryString);
+    const output = new Uint8Array(withExifBinary.length);
+    for (let index = 0; index < withExifBinary.length; index += 1) {
+      output[index] = withExifBinary.charCodeAt(index);
+    }
+
+    return new Blob([output], { type: MIME_JPEG });
+  } catch {
+    return jpegBlob;
+  }
+}
+
+function parseAltitude(value) {
+  if (typeof value === "number" && !Number.isNaN(value)) {
+    return value;
+  }
+  if (typeof value === "string") {
+    const match = value.match(/[-+]?\d*\.?\d+/);
+    return match ? Number(match[0]) : undefined;
+  }
+  return undefined;
+}
+
+function formatViewerValue(key, value) {
+  if (key === "Latitude" || key === "Longitude") {
+    const number = typeof value === "number" ? value : Number(value);
+    if (!Number.isNaN(number)) {
+      return number.toFixed(6);
+    }
+  }
+
+  if (key === "Altitude") {
+    const number = parseAltitude(value);
+    if (number !== undefined && !Number.isNaN(number)) {
+      return `${number.toFixed(1)} m`;
+    }
+  }
+
+  return formatMetadataValue(value);
+}
+
+function enrichMetadataWithGps(metadata, gps) {
+  const enriched = { ...metadata };
+
+  const latitude =
+    gps?.latitude ??
+    gps?.Latitude ??
+    metadata.latitude ??
+    metadata.Latitude ??
+    (typeof metadata.GPSLatitude === "number" ? metadata.GPSLatitude : undefined);
+
+  const longitude =
+    gps?.longitude ??
+    gps?.Longitude ??
+    metadata.longitude ??
+    metadata.Longitude ??
+    (typeof metadata.GPSLongitude === "number" ? metadata.GPSLongitude : undefined);
+
+  const altitude =
+    parseAltitude(gps?.altitude ?? gps?.Altitude) ??
+    parseAltitude(metadata.GPSAltitude ?? metadata.Altitude);
+
+  if (latitude !== undefined) {
+    enriched.Latitude = latitude;
+  }
+  if (longitude !== undefined) {
+    enriched.Longitude = longitude;
+  }
+  if (altitude !== undefined) {
+    enriched.Altitude = altitude;
+  }
+
+  return enriched;
+}
+
+function shouldSkipViewerKey(key) {
+  if (VIEWER_SKIP.has(key)) {
+    return true;
+  }
+  return VIEWER_STRUCTURE_PREFIXES.some((prefix) => key.startsWith(prefix));
+}
+
+function metadataRowsFromObject(metadata, gps = null) {
   const rows = [];
   const usedLabels = new Set();
-
-  function shouldSkipKey(key) {
-    if (VIEWER_SKIP.has(key)) {
-      return true;
-    }
-    return VIEWER_STRUCTURE_PREFIXES.some((prefix) => key.startsWith(prefix));
-  }
+  const enriched = enrichMetadataWithGps(metadata ?? {}, gps);
 
   function addRow(key, value) {
-    if (!isDisplayableValue(value) || shouldSkipKey(key)) {
+    if (!isDisplayableValue(value) || shouldSkipViewerKey(key)) {
       return;
     }
-    const formatted = formatMetadataValue(value);
+    const formatted = formatViewerValue(key, value);
     if (!formatted) {
       return;
     }
@@ -465,32 +663,115 @@ async function readExifMetadata(file) {
     rows.push([label, formatted]);
   }
 
-  if (metadata && typeof metadata === "object") {
-    for (const key of VIEWER_PRIORITY) {
-      if (key in metadata) {
-        addRow(key, metadata[key]);
-      }
-    }
-
-    for (const [key, value] of Object.entries(metadata)) {
-      if (VIEWER_PRIORITY.includes(key) || key.startsWith("_")) {
-        continue;
-      }
-      addRow(key, value);
+  for (const key of VIEWER_PRIORITY) {
+    if (key in enriched) {
+      addRow(key, enriched[key]);
     }
   }
 
-  try {
-    const gps = await exifr.gps(source);
-    if (gps?.latitude !== undefined && gps?.longitude !== undefined) {
-      addRow("Latitude", gps.latitude);
-      addRow("Longitude", gps.longitude);
+  for (const [key, value] of Object.entries(enriched)) {
+    if (VIEWER_PRIORITY.includes(key) || key.startsWith("_")) {
+      continue;
     }
+    addRow(key, value);
+  }
+
+  return rows;
+}
+
+function metadataFromExifReader(tags) {
+  const metadata = {};
+
+  if (tags.exif && typeof tags.exif === "object") {
+    for (const [key, tag] of Object.entries(tags.exif)) {
+      if (tag && typeof tag === "object") {
+        metadata[key] = tag.description ?? tag.value ?? tag;
+      } else {
+        metadata[key] = tag;
+      }
+    }
+  }
+
+  if (tags.composite && typeof tags.composite === "object") {
+    for (const [key, tag] of Object.entries(tags.composite)) {
+      if (key in metadata) {
+        continue;
+      }
+      metadata[key] = tag?.description ?? tag?.value ?? tag;
+    }
+  }
+
+  if (metadata.ISOSpeedRatings !== undefined && metadata.ISO === undefined) {
+    metadata.ISO = metadata.ISOSpeedRatings;
+  }
+
+  return {
+    metadata,
+    gps: tags.gps ?? null,
+  };
+}
+
+async function readWithExifr(file) {
+  const exifr = getExifr();
+  if (!exifr?.parse) {
+    throw new Error("EXIF library failed to load. Please refresh the page.");
+  }
+
+  const metadata = await exifr.parse(file, true);
+  let gps = null;
+  try {
+    gps = await exifr.gps(file);
   } catch {
     // GPS not available for this file.
   }
 
-  return rows;
+  return {
+    metadata,
+    gps,
+    rows: metadataRowsFromObject(metadata, gps),
+  };
+}
+
+async function readWithExifReader(file) {
+  const ExifReader = await ensureExifReader();
+  const buffer = await file.arrayBuffer();
+  const tags = ExifReader.load(buffer, { expanded: true });
+  const { metadata, gps } = metadataFromExifReader(tags);
+
+  return {
+    metadata,
+    gps,
+    rows: metadataRowsFromObject(metadata, gps),
+  };
+}
+
+function isHeicLikeFile(file) {
+  return HEIC_EXTENSIONS.has(fileExtension(file.name));
+}
+
+async function readExifMetadata(file) {
+  try {
+    return await readWithExifr(file);
+  } catch (error) {
+    if (!isHeicLikeFile(file)) {
+      throw error;
+    }
+  }
+
+  return readWithExifReader(file);
+}
+
+function emptyMetadataMessage(result) {
+  const metadataKeys =
+    result?.metadata && typeof result.metadata === "object"
+      ? Object.keys(result.metadata).filter((key) => !key.startsWith("_"))
+      : [];
+
+  if (metadataKeys.length) {
+    return "No camera EXIF in this file. It may have been exported or cleaned. Try the original HEIC or raw photo.";
+  }
+
+  return "No EXIF metadata found.";
 }
 
 function renderMetadataTable(tableElement, rows) {
@@ -540,13 +821,13 @@ function setupExifViewer() {
     setStatus(status, "Reading metadata…");
 
     try {
-      const rows = await readExifMetadata(file);
-      if (!rows.length) {
-        setStatus(status, "No EXIF metadata found.", "ok");
+      const result = await readExifMetadata(file);
+      if (!result.rows.length) {
+        setStatus(status, emptyMetadataMessage(result), "ok");
         return;
       }
-      renderMetadataTable(table, rows);
-      setStatus(status, `${rows.length} field${rows.length > 1 ? "s" : ""} found.`, "ok");
+      renderMetadataTable(table, result.rows);
+      setStatus(status, `${result.rows.length} field${result.rows.length > 1 ? "s" : ""} found.`, "ok");
     } catch (error) {
       setDropzoneLabel(dropzone, "Drop a file here or click to browse", false);
       setStatus(status, formatError(error), "err");

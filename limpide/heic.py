@@ -28,13 +28,17 @@ def convert_heic(
 
     with Image.open(input_path) as image:
         image.load()
+        exif_bytes = image.getexif().tobytes() or None
         converted = image
         if converted.mode in ("RGBA", "P", "LA"):
             converted = converted.convert("RGB")
 
-        converted.save(
-            output_path,
-            format="JPEG",
-            quality=quality,
-            subsampling=0,
-        )
+        save_kwargs: dict[str, object] = {
+            "format": "JPEG",
+            "quality": quality,
+            "subsampling": 0,
+        }
+        if exif_bytes:
+            save_kwargs["exif"] = exif_bytes
+
+        converted.save(output_path, **save_kwargs)
