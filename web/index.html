@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Effacez les EXIF et convertissez HEIC en JPEG — 100 % dans votre navigateur, rien n'est gardé.">
+  <title>Limpide — photos nettoyées, rien gardé</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="container">
+    <header class="hero">
+      <p class="eyebrow">Code ouvert · zéro serveur · zéro stockage</p>
+      <h1>Limpide</h1>
+      <p class="lead">
+        Effacement EXIF et conversion HEIC → JPEG, entièrement dans votre navigateur.
+        Vos fichiers ne quittent jamais votre appareil — vérifiable ligne par ligne
+        dans le <a href="https://github.com/thepriben/limpide" target="_blank" rel="noopener">dépôt GitHub</a>.
+      </p>
+    </header>
+
+    <section class="proof card">
+      <h2>Rien gardé, à aucun point</h2>
+      <ul class="proof-list">
+        <li><strong>Pas d'upload</strong> — aucune requête réseau vers un serveur de traitement</li>
+        <li><strong>Pas de base de données</strong> — pas de compte, pas de cookie de suivi</li>
+        <li><strong>Pas de fichier temporaire côté serveur</strong> — il n'y a pas de serveur</li>
+        <li><strong>Code auditable</strong> — <code>web/app.js</code> fait tout le travail localement</li>
+      </ul>
+    </section>
+
+    <div class="grid">
+      <section class="card" id="exif-panel">
+        <h2>Effacer les EXIF</h2>
+        <p>JPEG, PNG, WebP — les métadonnées (GPS, appareil, date…) sont retirées par réencodage local.</p>
+        <label class="dropzone" id="exif-dropzone">
+          <input type="file" id="exif-input" accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp" hidden>
+          <span>Déposer une image ou cliquer</span>
+        </label>
+        <p class="status" id="exif-status" aria-live="polite"></p>
+        <button id="exif-download" class="outline" hidden>Télécharger l'image nettoyée</button>
+      </section>
+
+      <section class="card" id="heic-panel">
+        <h2>HEIC → JPEG</h2>
+        <p>Convertissez les photos iPhone (.heic, .heif) en JPEG standard, sans les envoyer en ligne.</p>
+        <label class="dropzone" id="heic-dropzone">
+          <input type="file" id="heic-input" accept="image/heic,image/heif,.heic,.heif" hidden>
+          <span>Déposer un fichier HEIC ou cliquer</span>
+        </label>
+        <p class="status" id="heic-status" aria-live="polite"></p>
+        <button id="heic-download" class="outline" hidden>Télécharger le JPEG</button>
+      </section>
+    </div>
+
+    <footer>
+      <p>
+        CLI Python disponible dans le même dépôt :
+        <code>limpide strip-exif</code> · <code>limpide convert-heic</code>
+      </p>
+      <p>
+        <a href="https://github.com/thepriben/limpide" target="_blank" rel="noopener">thepriben/limpide</a>
+        — Apache-2.0
+      </p>
+    </footer>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

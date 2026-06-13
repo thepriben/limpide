@@ -1,0 +1,130 @@
+:root {
+  --limpide-bg: #f4f8fb;
+  --limpide-ink: #1a2b33;
+  --limpide-accent: #2a9d8f;
+  --limpide-accent-soft: #d7f0ec;
+  --limpide-card: #ffffff;
+  --limpide-border: #c8dde6;
+}
+
+body {
+  background:
+    radial-gradient(circle at top left, var(--limpide-accent-soft), transparent 45%),
+    var(--limpide-bg);
+  color: var(--limpide-ink);
+}
+
+.container {
+  max-width: 920px;
+  padding-top: 2rem;
+  padding-bottom: 3rem;
+}
+
+.hero {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.eyebrow {
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  color: var(--limpide-accent);
+  margin-bottom: 0.5rem;
+}
+
+.hero h1 {
+  font-size: clamp(2.5rem, 8vw, 4rem);
+  margin-bottom: 0.5rem;
+  font-weight: 700;
+}
+
+.lead {
+  font-size: 1.05rem;
+  max-width: 42rem;
+  margin: 0 auto;
+}
+
+.card {
+  background: var(--limpide-card);
+  border: 1px solid var(--limpide-border);
+  border-radius: 1rem;
+  padding: 1.25rem 1.5rem;
+  box-shadow: 0 10px 30px rgba(26, 43, 51, 0.05);
+}
+
+.proof {
+  margin-bottom: 1.5rem;
+}
+
+.proof-list {
+  margin: 0;
+  padding-left: 1.2rem;
+}
+
+.proof-list li + li {
+  margin-top: 0.4rem;
+}
+
+.grid {
+  display: grid;
+  gap: 1.25rem;
+}
+
+@media (min-width: 768px) {
+  .grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.dropzone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 8rem;
+  border: 2px dashed var(--limpide-border);
+  border-radius: 0.75rem;
+  background: var(--limpide-bg);
+  cursor: pointer;
+  text-align: center;
+  padding: 1rem;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.dropzone:hover,
+.dropzone.dragover {
+  border-color: var(--limpide-accent);
+  background: var(--limpide-accent-soft);
+}
+
+.status {
+  min-height: 1.4rem;
+  font-size: 0.9rem;
+  margin: 0.75rem 0 0.5rem;
+}
+
+.status.ok {
+  color: var(--limpide-accent);
+}
+
+.status.err {
+  color: #c0392b;
+}
+
+footer {
+  margin-top: 2rem;
+  text-align: center;
+  font-size: 0.9rem;
+  color: #4d6570;
+}
+
+footer p {
+  margin: 0.35rem 0;
+}
+
+button#exif-download,
+button#heic-download {
+  width: 100%;
+  border-color: var(--limpide-accent);
+  color: var(--limpide-accent);
+}

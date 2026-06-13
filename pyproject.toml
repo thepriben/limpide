@@ -3,9 +3,9 @@ requires = ["setuptools>=69"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "photo-privacy"
-version = "0.1.0"
-description = "Suppression des métadonnées EXIF et conversion HEIC vers JPEG."
+name = "limpide"
+version = "0.2.0"
+description = "Effacement EXIF et conversion HEIC vers JPEG — web client-side et CLI, rien n'est gardé."
 readme = "README.md"
 license = { text = "Apache-2.0" }
 requires-python = ">=3.10"
@@ -16,14 +16,14 @@ dependencies = [
 ]
 
 [project.scripts]
-photo-privacy = "photo_privacy.cli:main"
+limpide = "limpide.cli:main"
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0"]
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["photo_privacy*"]
+include = ["limpide*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

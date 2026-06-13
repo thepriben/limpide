@@ -1,10 +1,9 @@
 from io import BytesIO
 
-import pytest
 from PIL import Image
 
-from photo_privacy.exif import strip_exif
-from photo_privacy.heic import convert_heic
+from limpide.exif import strip_exif
+from limpide.heic import convert_heic
 
 
 def _jpeg_with_exif(path) -> None:

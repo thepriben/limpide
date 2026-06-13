@@ -1,4 +1,4 @@
-from photo_privacy.cli import main
+from limpide.cli import main
 
 if __name__ == "__main__":
     raise SystemExit(main())

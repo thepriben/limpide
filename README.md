@@ -1,47 +1,47 @@
-#### *Photo Privacy : effacement EXIF et conversion HEIC*
+#### *Limpide — photos nettoyées, rien gardé*
 
-Outil en ligne de commande pour retirer les métadonnées EXIF des photos et convertir les fichiers HEIC/HEIF (iPhone, appareils Apple) vers JPEG.
+Effacement EXIF et conversion HEIC → JPEG, avec une preuve vérifiable : **le site web traite tout dans le navigateur**, sans upload ni stockage. Le code est ouvert — on peut auditer chaque ligne.
 
 ---
 
+##### Pourquoi « Limpide » ?
+
+- **Limpide** = transparent (processus auditable) et net (métadonnées retirées) ;
+- le site démontre qu'on ne garde rien à aucun point : pas de serveur de traitement, pas de base, pas de fichier temporaire distant.
+
 ##### Fonctions
 
-- `strip-exif` : réencode une image sans conserver les métadonnées EXIF (JPEG, PNG, WebP, TIFF) ;
-- `convert-heic` : convertit HEIC/HEIF vers JPEG.
+| Outil | Rôle |
+|---|---|
+| **Site web** (`web/`) | EXIF + HEIC → JPEG, 100 % client-side |
+| **CLI** (`limpide`) | Même logique en local, pour scripts et lots |
 
-##### Prérequis
+##### Site web (démo publique)
 
-- Python 3.10+
+Ouvrir `web/index.html` ou publier sur GitHub Pages :
 
-##### Installation
+```
+# depuis la racine du dépôt
+python -m http.server 8080 --directory web
+# → http://localhost:8080
+```
+
+Le traitement est dans `web/app.js` : canvas pour l'EXIF, `heic2any` pour le HEIC. Aucun `fetch` des fichiers utilisateur.
+
+##### CLI
+
+Prérequis : Python 3.10+
 
 ```
 pip install -e .
 ```
 
-##### Exemples
-
-Supprimer les EXIF d'une photo :
-
 ```
-photo-privacy strip-exif photo.jpg
-photo-privacy strip-exif photo.jpg -o photo-sans-exif.jpg
-photo-privacy strip-exif ./vacances/ -d ./vacances-clean/
-```
+limpide strip-exif photo.jpg
+limpide strip-exif ./vacances/ -d ./vacances-clean/
 
-Convertir un HEIC en JPEG :
-
-```
-photo-privacy convert-heic IMG_0001.HEIC
-photo-privacy convert-heic IMG_0001.HEIC -o IMG_0001.jpg
-photo-privacy convert-heic ./iphone/ -d ./jpeg/
-```
-
-Sans installation, via le module :
-
-```
-python -m photo_privacy strip-exif photo.jpg
-python -m photo_privacy convert-heic photo.heic
+limpide convert-heic IMG_0001.HEIC
+limpide convert-heic ./iphone/ -d ./jpeg/
 ```
 
 ##### Tests

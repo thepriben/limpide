@@ -4,8 +4,8 @@ import argparse
 import sys
 from pathlib import Path
 
-from photo_privacy.exif import SUPPORTED_EXIF_FORMATS, strip_exif
-from photo_privacy.heic import SUPPORTED_HEIC_FORMATS, convert_heic
+from limpide.exif import SUPPORTED_EXIF_FORMATS, strip_exif
+from limpide.heic import SUPPORTED_HEIC_FORMATS, convert_heic
 
 
 def _default_output_path(input_path: Path, suffix: str) -> Path:
@@ -70,8 +70,8 @@ def _run_convert_heic(args: argparse.Namespace) -> int:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        prog="photo-privacy",
-        description="Suppression EXIF et conversion HEIC pour protéger la vie privée.",
+        prog="limpide",
+        description="Effacement EXIF et conversion HEIC — CLI local, sans stockage.",
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
