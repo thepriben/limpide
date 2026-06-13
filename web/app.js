@@ -7,6 +7,37 @@ const MIME_JPEG = "image/jpeg";
 const HEIC_CDN = "https://cdn.jsdelivr.net/npm/heic-to@1.5.2/dist/iife/heic-to.js";
 const DEFAULT_DROPZONE_LABEL = "Drop files here or click to browse";
 const VIEWER_EXTENSIONS = new Set([".jpg", ".jpeg", ".png", ".webp", ".heic", ".heif"]);
+const VIEWER_PRIORITY = [
+  "Make",
+  "Model",
+  "LensModel",
+  "Software",
+  "DateTimeOriginal",
+  "CreateDate",
+  "ModifyDate",
+  "ExposureTime",
+  "FNumber",
+  "ISO",
+  "FocalLength",
+  "ImageWidth",
+  "ImageHeight",
+  "Orientation",
+];
+
+const VIEWER_SKIP = new Set([
+  "latitude",
+  "longitude",
+  "GPSLatitude",
+  "GPSLongitude",
+  "GPSAltitude",
+  "GPSDateStamp",
+  "GPSTimeStamp",
+  "MakerNote",
+  "UserComment",
+  "thumbnail",
+  "PreviewImage",
+  "Images",
+]);
 const VIEWER_LABELS = {
   Make: "Camera make",
   Model: "Camera model",
@@ -22,8 +53,6 @@ const VIEWER_LABELS = {
   ImageWidth: "Width",
   ImageHeight: "Height",
   Orientation: "Orientation",
-  GPSLatitude: "Latitude",
-  GPSLongitude: "Longitude",
 };
 const EXIF_EXTENSIONS = new Set([".jpg", ".jpeg", ".png", ".webp"]);
 const HEIC_EXTENSIONS = new Set([".heic", ".heif"]);
@@ -35,6 +64,8 @@ const ERROR_MESSAGES = [
   ["Could not read the image", "Could not read the image file."],
   ["JPEG encoding failed", "JPEG encoding failed."],
   ["ZIP library unavailable", "ZIP library failed to load. Please refresh the page."],
+  ["try using full build of exifr", "EXIF library failed to load. Please refresh the page."],
+  ["Unknown file format", "Unsupported file format for EXIF viewing."],
 ];
 
 let heicLibraryPromise = null;
@@ -246,15 +277,119 @@ function formatMetadataValue(value) {
     return "";
   }
   if (typeof value === "number") {
+    if (value > 0 && value < 1) {
+      return `1/${Math.round(1 / value)}s`;
+    }
     return Number.isInteger(value) ? String(value) : value.toFixed(2).replace(/\.?0+$/, "");
   }
   if (value instanceof Date) {
     return value.toISOString().replace("T", " ").replace(/\.\d{3}Z$/, " UTC");
   }
+  if (Array.isArray(value)) {
+    return value.map((item) => formatMetadataValue(item)).join(", ");
+  }
   if (typeof value === "object") {
+    if (value instanceof ArrayBuffer || ArrayBuffer.isView(value)) {
+      return "";
+    }
     return JSON.stringify(value);
   }
-  return String(value);
+  return String(value).trim();
+}
+
+function isDisplayableValue(value) {
+  if (value === null || value === undefined) {
+    return false;
+  }
+  if (typeof value === "string" && !value.trim()) {
+    return false;
+  }
+  if (value instanceof ArrayBuffer || ArrayBuffer.isView(value)) {
+    return false;
+  }
+  return true;
+}
+
+function getExifr() {
+  return globalThis.exifr;
+}
+
+async function fileForExifReading(file) {
+  const extension = fileExtension(file.name);
+  const looksHeic = HEIC_EXTENSIONS.has(extension);
+
+  if (!looksHeic && typeof HeicTo === "function" && typeof HeicTo.isHeic === "function") {
+    try {
+      if (await HeicTo.isHeic(file)) {
+        const heicLibrary = await ensureHeicLibrary();
+        return heicLibrary({ blob: file, type: MIME_JPEG, quality: 0.95 });
+      }
+    } catch {
+      // Fall back to reading the original file.
+    }
+  }
+
+  if (looksHeic) {
+    const heicLibrary = await ensureHeicLibrary();
+    return heicLibrary({ blob: file, type: MIME_JPEG, quality: 0.95 });
+  }
+
+  return file;
+}
+
+async function readExifMetadata(file) {
+  const exifr = getExifr();
+  if (!exifr?.parse) {
+    throw new Error("EXIF library failed to load. Please refresh the page.");
+  }
+
+  const source = await fileForExifReading(file);
+  const metadata = await exifr.parse(source, true);
+  const rows = [];
+  const usedLabels = new Set();
+
+  function addRow(key, value) {
+    if (!isDisplayableValue(value) || VIEWER_SKIP.has(key)) {
+      return;
+    }
+    const formatted = formatMetadataValue(value);
+    if (!formatted) {
+      return;
+    }
+    const label = VIEWER_LABELS[key] || key;
+    if (usedLabels.has(label)) {
+      return;
+    }
+    usedLabels.add(label);
+    rows.push([label, formatted]);
+  }
+
+  if (metadata && typeof metadata === "object") {
+    for (const key of VIEWER_PRIORITY) {
+      if (key in metadata) {
+        addRow(key, metadata[key]);
+      }
+    }
+
+    for (const [key, value] of Object.entries(metadata)) {
+      if (VIEWER_PRIORITY.includes(key) || key.startsWith("_")) {
+        continue;
+      }
+      addRow(key, value);
+    }
+  }
+
+  try {
+    const gps = await exifr.gps(source);
+    if (gps?.latitude !== undefined && gps?.longitude !== undefined) {
+      addRow("Latitude", gps.latitude);
+      addRow("Longitude", gps.longitude);
+    }
+  } catch {
+    // GPS not available for this file.
+  }
+
+  return rows;
 }
 
 function renderMetadataTable(tableElement, rows) {
@@ -275,38 +410,6 @@ function renderMetadataTable(tableElement, rows) {
   tableElement.hidden = false;
 }
 
-async function readExifMetadata(file) {
-  if (typeof exifr === "undefined") {
-    throw new Error("EXIF library failed to load. Please refresh the page.");
-  }
-
-  const metadata = await exifr.parse(file, { tiff: true, ifd0: true, exif: true, gps: true });
-  const rows = [];
-
-  if (metadata && typeof metadata === "object") {
-    for (const [key, value] of Object.entries(metadata)) {
-      if (value === undefined || value === null || key.startsWith("_")) {
-        continue;
-      }
-      const label = VIEWER_LABELS[key] || key;
-      rows.push([label, formatMetadataValue(value)]);
-    }
-  }
-
-  try {
-    const gps = await exifr.gps(file);
-    if (gps?.latitude !== undefined && gps?.longitude !== undefined) {
-      rows.push(["Latitude", formatMetadataValue(gps.latitude)]);
-      rows.push(["Longitude", formatMetadataValue(gps.longitude)]);
-    }
-  } catch {
-    // GPS not available for this file.
-  }
-
-  rows.sort((a, b) => a[0].localeCompare(b[0]));
-  return rows;
-}
-
 function setupExifViewer() {
   const dropzone = document.getElementById("view-dropzone");
   const input = document.getElementById("view-input");
@@ -314,18 +417,24 @@ function setupExifViewer() {
   const table = document.getElementById("view-meta");
 
   wireDropzone(dropzone, input, async (fileList) => {
-    const files = collectFilesFromInput(fileList, VIEWER_EXTENSIONS);
+    const files = Array.from(fileList);
     input.value = "";
     table.hidden = true;
     table.innerHTML = "";
 
     if (!files.length) {
       setDropzoneLabel(dropzone, "Drop a file here or click to browse", false);
-      setStatus(status, "No supported files selected.", "err");
+      setStatus(status, "No file selected.", "err");
       return;
     }
 
     const file = files[0];
+    const extension = fileExtension(file.name);
+    if (!VIEWER_EXTENSIONS.has(extension) && !file.type.startsWith("image/")) {
+      setDropzoneLabel(dropzone, "Drop a file here or click to browse", false);
+      setStatus(status, "Unsupported file type.", "err");
+      return;
+    }
     setDropzoneLabel(dropzone, file.name, true);
     setStatus(status, "Reading metadata…");
 
