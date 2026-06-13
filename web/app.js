@@ -37,7 +37,31 @@ const VIEWER_SKIP = new Set([
   "thumbnail",
   "PreviewImage",
   "Images",
+  "JFIFVersion",
+  "ResolutionUnit",
+  "XResolution",
+  "YResolution",
+  "ThumbnailWidth",
+  "ThumbnailHeight",
+  "ColorSpace",
+  "PixelXDimension",
+  "PixelYDimension",
+  "ProfileVersion",
+  "ProfileClass",
+  "ColorSpaceData",
+  "ProfileConnectionSpace",
+  "ProfileDateTime",
+  "ProfileFileSignature",
+  "RenderingIntent",
+  "ProfileDescription",
+  "ProfileCopyright",
+  "ProfileCreator",
+  "ProfileCMMType",
+  "DeviceManufacturer",
+  "DeviceModel",
 ]);
+
+const VIEWER_STRUCTURE_PREFIXES = ["Profile", "Interoperability", "ComponentsConfiguration", "JFIF"];
 const VIEWER_LABELS = {
   Make: "Camera make",
   Model: "Camera model",
@@ -199,10 +223,80 @@ async function canvasToJpegBlob(source, width, height, quality = 0.95) {
   });
 }
 
+function concatUint8Arrays(chunks) {
+  const total = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
+  const output = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    output.set(chunk, offset);
+    offset += chunk.length;
+  }
+  return output;
+}
+
+function stripJpegAppSegments(input) {
+  const bytes = input instanceof Uint8Array ? input : new Uint8Array(input);
+  if (bytes.length < 2 || bytes[0] !== 0xff || bytes[1] !== 0xd8) {
+    throw new Error("JPEG encoding failed.");
+  }
+
+  const chunks = [bytes.slice(0, 2)];
+  let offset = 2;
+
+  while (offset < bytes.length) {
+    if (bytes[offset] !== 0xff) {
+      break;
+    }
+
+    const markerStart = offset;
+    offset += 1;
+    const marker = bytes[offset];
+    offset += 1;
+
+    if (marker === 0xd9) {
+      chunks.push(bytes.slice(markerStart, offset));
+      break;
+    }
+
+    if ((marker >= 0xd0 && marker <= 0xd7) || marker === 0x01) {
+      chunks.push(bytes.slice(markerStart, offset));
+      continue;
+    }
+
+    if (marker === 0xda) {
+      chunks.push(bytes.slice(markerStart));
+      break;
+    }
+
+    if (offset + 1 >= bytes.length) {
+      break;
+    }
+
+    const segmentLength = (bytes[offset] << 8) + bytes[offset + 1];
+    const segmentEnd = offset + segmentLength;
+    if (segmentLength < 2 || segmentEnd > bytes.length) {
+      break;
+    }
+
+    const isApp = marker >= 0xe0 && marker <= 0xef;
+    const isComment = marker === 0xfe;
+    if (!isApp && !isComment) {
+      chunks.push(bytes.slice(markerStart, segmentEnd));
+    }
+
+    offset = segmentEnd;
+  }
+
+  return concatUint8Arrays(chunks);
+}
+
 async function stripExif(file) {
   const bitmap = await loadImageFromFile(file);
   try {
-    return await canvasToJpegBlob(bitmap, bitmap.width, bitmap.height);
+    const blob = await canvasToJpegBlob(bitmap, bitmap.width, bitmap.height);
+    const buffer = await blob.arrayBuffer();
+    const stripped = stripJpegAppSegments(new Uint8Array(buffer));
+    return new Blob([stripped], { type: MIME_JPEG });
   } finally {
     if (typeof bitmap.close === "function") {
       bitmap.close();
@@ -348,8 +442,15 @@ async function readExifMetadata(file) {
   const rows = [];
   const usedLabels = new Set();
 
+  function shouldSkipKey(key) {
+    if (VIEWER_SKIP.has(key)) {
+      return true;
+    }
+    return VIEWER_STRUCTURE_PREFIXES.some((prefix) => key.startsWith(prefix));
+  }
+
   function addRow(key, value) {
-    if (!isDisplayableValue(value) || VIEWER_SKIP.has(key)) {
+    if (!isDisplayableValue(value) || shouldSkipKey(key)) {
       return;
     }
     const formatted = formatMetadataValue(value);

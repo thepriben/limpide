@@ -4,6 +4,7 @@ from PIL import Image
 
 from limpide.exif import strip_exif
 from limpide.heic import convert_heic
+from limpide.jpeg_clean import strip_jpeg_app_segments
 
 
 def _jpeg_with_exif(path) -> None:
@@ -22,6 +23,18 @@ def test_strip_exif_removes_metadata(tmp_path):
 
     with Image.open(target) as cleaned:
         assert not cleaned.getexif()
+
+
+def test_strip_jpeg_app_segments_removes_app_markers():
+    image = Image.new("RGB", (8, 8), color=(10, 20, 30))
+    buffer = BytesIO()
+    image.save(buffer, format="JPEG", exif=image.getexif().tobytes())
+
+    stripped = strip_jpeg_app_segments(buffer.getvalue())
+
+    assert stripped.startswith(b"\xff\xd8")
+    assert b"Exif" not in stripped
+    assert b"ICC_PROFILE" not in stripped
 
 
 def test_convert_heic_to_jpeg(tmp_path):

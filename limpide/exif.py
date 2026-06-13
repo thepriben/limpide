@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+from io import BytesIO
 from pathlib import Path
 
 from PIL import Image
+
+from limpide.jpeg_clean import strip_jpeg_app_segments
 
 SUPPORTED_EXIF_FORMATS = {".jpg", ".jpeg", ".png", ".webp", ".tif", ".tiff"}
 
@@ -30,6 +33,12 @@ def strip_exif(input_path: Path, output_path: Path, *, quality: int = 95) -> Non
                 cleaned = cleaned.convert("RGB")
             save_kwargs["quality"] = quality
             save_kwargs["subsampling"] = 0
+            save_kwargs["exif"] = b""
+
+            buffer = BytesIO()
+            cleaned.save(buffer, format="JPEG", **save_kwargs)
+            output_path.write_bytes(strip_jpeg_app_segments(buffer.getvalue()))
+            return
 
         cleaned.save(output_path, format=output_format, **save_kwargs)
 
