@@ -1,22 +1,35 @@
 /**
- * Limpide — 100 % local processing.
- * No fetch, no storage, no network upload of user files.
+ * Limpide — local browser processing only.
+ * No fetch upload, no storage, no server-side handling of user files.
  */
 
 const MIME_JPEG = "image/jpeg";
-const DEFAULT_DROPZONE_LABEL = "Choose a file";
+const DEFAULT_DROPZONE_LABEL = "Choose files";
+const EXIF_EXTENSIONS = new Set([".jpg", ".jpeg", ".png", ".webp"]);
+const HEIC_EXTENSIONS = new Set([".heic", ".heif"]);
 
 function setStatus(element, message, kind = "") {
   element.textContent = message;
   element.className = `status${kind ? ` ${kind}` : ""}`;
 }
 
-function setDropzoneLabel(dropzone, label, hasFile = false) {
+function setDropzoneLabel(dropzone, label, hasFiles = false) {
   const text = dropzone.querySelector(".dropzone-label");
   if (text) {
     text.textContent = label;
   }
-  dropzone.classList.toggle("has-file", hasFile);
+  dropzone.classList.toggle("has-file", hasFiles);
+}
+
+function fileExtension(name) {
+  const dot = name.lastIndexOf(".");
+  return dot === -1 ? "" : name.slice(dot).toLowerCase();
+}
+
+function outputName(inputName, suffix) {
+  const dot = inputName.lastIndexOf(".");
+  const stem = dot === -1 ? inputName : inputName.slice(0, dot);
+  return `${stem}${suffix}`;
 }
 
 function downloadBlob(blob, filename) {
@@ -28,10 +41,27 @@ function downloadBlob(blob, filename) {
   URL.revokeObjectURL(url);
 }
 
-function outputName(inputName, suffix) {
-  const dot = inputName.lastIndexOf(".");
-  const stem = dot === -1 ? inputName : inputName.slice(0, dot);
-  return `${stem}${suffix}`;
+function renderFileList(listElement, files) {
+  listElement.innerHTML = "";
+  if (!files.length) {
+    listElement.hidden = true;
+    return;
+  }
+
+  for (const file of files) {
+    const item = document.createElement("li");
+    item.textContent = file.name;
+    listElement.appendChild(item);
+  }
+  listElement.hidden = false;
+}
+
+function collectFilesFromInput(fileList, allowedExtensions, acceptAll = false) {
+  const files = Array.from(fileList);
+  if (acceptAll) {
+    return files;
+  }
+  return files.filter((file) => allowedExtensions.has(fileExtension(file.name)));
 }
 
 async function loadImageFromFile(file) {
@@ -80,21 +110,67 @@ async function stripExif(file) {
   }
 }
 
+async function isHeicFile(file) {
+  const extension = fileExtension(file.name);
+  if (HEIC_EXTENSIONS.has(extension)) {
+    return true;
+  }
+  if (typeof HeicTo !== "undefined" && typeof HeicTo.isHeic === "function") {
+    return HeicTo.isHeic(file);
+  }
+  return false;
+}
+
 async function convertHeicToJpeg(file) {
-  if (typeof heic2any !== "function") {
+  if (typeof HeicTo !== "function") {
     throw new Error("HEIC library unavailable.");
   }
 
-  const result = await heic2any({
+  if (!(await isHeicFile(file))) {
+    throw new Error(`Not a HEIC/HEIF file: ${file.name}`);
+  }
+
+  return HeicTo({
     blob: file,
-    toType: MIME_JPEG,
+    type: MIME_JPEG,
     quality: 0.95,
   });
-
-  return Array.isArray(result) ? result[0] : result;
 }
 
-function wireDropzone(dropzone, input, onFile) {
+async function processBatch(files, processor, outputSuffix, onProgress) {
+  const results = [];
+
+  for (let index = 0; index < files.length; index += 1) {
+    onProgress(index + 1, files.length, files[index].name);
+    const blob = await processor(files[index]);
+    results.push({
+      name: outputName(files[index].name, outputSuffix),
+      blob,
+    });
+  }
+
+  return results;
+}
+
+async function downloadResults(results, zipName) {
+  if (results.length === 1) {
+    downloadBlob(results[0].blob, results[0].name);
+    return;
+  }
+
+  if (typeof JSZip === "undefined") {
+    throw new Error("ZIP library unavailable.");
+  }
+
+  const zip = new JSZip();
+  for (const result of results) {
+    zip.file(result.name, result.blob);
+  }
+  const zipBlob = await zip.generateAsync({ type: "blob" });
+  downloadBlob(zipBlob, zipName);
+}
+
+function wireDropzone(dropzone, input, onFiles) {
   dropzone.addEventListener("dragover", (event) => {
     event.preventDefault();
     dropzone.classList.add("dragover");
@@ -107,47 +183,75 @@ function wireDropzone(dropzone, input, onFile) {
   dropzone.addEventListener("drop", (event) => {
     event.preventDefault();
     dropzone.classList.remove("dragover");
-    const file = event.dataTransfer?.files?.[0];
-    if (file) {
-      onFile(file);
+    if (event.dataTransfer?.files?.length) {
+      onFiles(event.dataTransfer.files);
     }
   });
 
   input.addEventListener("change", () => {
-    const file = input.files?.[0];
-    if (file) {
-      onFile(file);
+    if (input.files?.length) {
+      onFiles(input.files);
     }
   });
 }
 
-function setupPanel({ dropzoneId, inputId, statusId, downloadId, process, outputSuffix, readyMessage }) {
+function setupPanel({
+  dropzoneId,
+  inputId,
+  listId,
+  statusId,
+  downloadId,
+  allowedExtensions,
+  acceptAll = false,
+  process,
+  outputSuffix,
+  zipName,
+}) {
   const dropzone = document.getElementById(dropzoneId);
   const input = document.getElementById(inputId);
+  const list = document.getElementById(listId);
   const status = document.getElementById(statusId);
   const download = document.getElementById(downloadId);
-  let resultBlob = null;
-  let resultName = `output${outputSuffix}`;
+  let results = [];
 
-  download.addEventListener("click", () => {
-    if (resultBlob) {
-      downloadBlob(resultBlob, resultName);
+  download.addEventListener("click", async () => {
+    if (!results.length) {
+      return;
+    }
+    try {
+      await downloadResults(results, zipName);
+    } catch (error) {
+      setStatus(status, error.message || "Download failed.", "err");
     }
   });
 
-  wireDropzone(dropzone, input, async (file) => {
+  wireDropzone(dropzone, input, async (fileList) => {
+    const files = collectFilesFromInput(fileList, allowedExtensions, acceptAll);
     download.hidden = true;
-    resultBlob = null;
-    setDropzoneLabel(dropzone, file.name, true);
-      setStatus(status, "Processing…");
+    results = [];
+    input.value = "";
+
+    if (!files.length) {
+      setDropzoneLabel(dropzone, DEFAULT_DROPZONE_LABEL, false);
+      renderFileList(list, []);
+      setStatus(status, "No supported files selected.", "err");
+      return;
+    }
+
+    setDropzoneLabel(dropzone, `${files.length} file${files.length > 1 ? "s" : ""} selected`, true);
+    renderFileList(list, files);
+    setStatus(status, "Processing…");
 
     try {
-      resultBlob = await process(file);
-      resultName = outputName(file.name, outputSuffix);
-      setStatus(status, readyMessage, "ok");
+      results = await processBatch(files, process, outputSuffix, (current, total, name) => {
+        setStatus(status, `Processing ${current}/${total}: ${name}`);
+      });
+      setStatus(status, `${results.length} file${results.length > 1 ? "s" : ""} ready.`, "ok");
+      download.textContent = results.length > 1 ? "Download ZIP" : "Download";
       download.hidden = false;
     } catch (error) {
       setDropzoneLabel(dropzone, DEFAULT_DROPZONE_LABEL, false);
+      renderFileList(list, []);
       setStatus(status, error.message || "Processing failed.", "err");
     }
   });
@@ -156,19 +260,24 @@ function setupPanel({ dropzoneId, inputId, statusId, downloadId, process, output
 setupPanel({
   dropzoneId: "exif-dropzone",
   inputId: "exif-input",
+  listId: "exif-files",
   statusId: "exif-status",
   downloadId: "exif-download",
+  allowedExtensions: EXIF_EXTENSIONS,
   process: stripExif,
   outputSuffix: ".clean.jpg",
-  readyMessage: "Ready to download.",
+  zipName: "limpide-exif.zip",
 });
 
 setupPanel({
   dropzoneId: "heic-dropzone",
   inputId: "heic-input",
+  listId: "heic-files",
   statusId: "heic-status",
   downloadId: "heic-download",
+  allowedExtensions: HEIC_EXTENSIONS,
+  acceptAll: true,
   process: convertHeicToJpeg,
   outputSuffix: ".jpg",
-  readyMessage: "Ready to download.",
+  zipName: "limpide-heic.zip",
 });

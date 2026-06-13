@@ -15,7 +15,7 @@ Strip EXIF metadata and convert HEIC to JPEG.
 
 **Why open source**
 
-The web app processes files in the browser. There is no upload endpoint, no database, and no server-side storage. Processing is implemented in `web/app.js` (canvas re-encode for EXIF, `heic2any` for HEIC) and can be reviewed directly. A Python CLI in `limpide/` provides the same functions for local or batch use.
+The web app processes files in the browser. There is no upload endpoint, no database, and no server-side storage. Processing is implemented in `web/app.js` (canvas re-encode for EXIF, `heic-to` for HEIC) and can be reviewed directly. A Python CLI in `limpide/` provides the same functions for local or batch use.
 
 ##### Structure
 

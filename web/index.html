@@ -22,22 +22,24 @@
     <div class="tools">
       <section class="tool">
         <h2>Strip EXIF</h2>
-        <p class="hint">JPEG, PNG, WebP</p>
+        <p class="hint">JPEG, PNG, WebP — multiple files supported</p>
         <label class="dropzone" id="exif-dropzone">
-          <input type="file" id="exif-input" accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp" hidden>
-          <span class="dropzone-label">Choose a file</span>
+          <input type="file" id="exif-input" accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp" multiple hidden>
+          <span class="dropzone-label">Choose files</span>
         </label>
+        <ul class="file-list" id="exif-files" hidden></ul>
         <p class="status" id="exif-status" aria-live="polite"></p>
         <button type="button" id="exif-download" hidden>Download</button>
       </section>
 
       <section class="tool">
         <h2>HEIC to JPEG</h2>
-        <p class="hint">.heic, .heif</p>
+        <p class="hint">.heic, .heif — multiple files supported</p>
         <label class="dropzone" id="heic-dropzone">
-          <input type="file" id="heic-input" accept="image/heic,image/heif,.heic,.heif" hidden>
-          <span class="dropzone-label">Choose a file</span>
+          <input type="file" id="heic-input" accept="image/heic,image/heif,.heic,.heif" multiple hidden>
+          <span class="dropzone-label">Choose files</span>
         </label>
+        <ul class="file-list" id="heic-files" hidden></ul>
         <p class="status" id="heic-status" aria-live="polite"></p>
         <button type="button" id="heic-download" hidden>Download</button>
       </section>
@@ -48,7 +50,8 @@
     </footer>
   </main>
 
-  <script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/heic-to@1.5.2/dist/iife/heic-to.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

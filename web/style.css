@@ -96,6 +96,19 @@ header h1 {
   word-break: break-all;
 }
 
+.file-list {
+  margin: 0.6rem 0 0;
+  padding: 0.5rem 0 0 1rem;
+  font-size: 0.75rem;
+  color: #555;
+  max-height: 6rem;
+  overflow-y: auto;
+}
+
+.file-list li + li {
+  margin-top: 0.15rem;
+}
+
 .status {
   min-height: 1.2rem;
   margin: 0.6rem 0 0;
