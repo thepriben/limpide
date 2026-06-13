@@ -8,12 +8,12 @@ SUPPORTED_EXIF_FORMATS = {".jpg", ".jpeg", ".png", ".webp", ".tif", ".tiff"}
 
 
 def strip_exif(input_path: Path, output_path: Path, *, quality: int = 95) -> None:
-    """Réencode une image sans conserver les métadonnées EXIF."""
+    """Re-encode an image without EXIF metadata."""
     suffix = input_path.suffix.lower()
     if suffix not in SUPPORTED_EXIF_FORMATS:
         raise ValueError(
-            f"Format non pris en charge pour l'effacement EXIF : {suffix}. "
-            f"Formats acceptés : {', '.join(sorted(SUPPORTED_EXIF_FORMATS))}"
+            f"Unsupported format for EXIF stripping: {suffix}. "
+            f"Accepted formats: {', '.join(sorted(SUPPORTED_EXIF_FORMATS))}"
         )
 
     output_path.parent.mkdir(parents=True, exist_ok=True)

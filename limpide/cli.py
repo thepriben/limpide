@@ -22,13 +22,13 @@ def _collect_inputs(paths: list[Path], allowed_suffixes: set[str]) -> list[Path]
             continue
         if path.suffix.lower() not in allowed_suffixes:
             raise ValueError(
-                f"Fichier ignoré ou non pris en charge : {path} "
-                f"(formats acceptés : {', '.join(sorted(allowed_suffixes))})"
+                f"Unsupported file: {path} "
+                f"(accepted formats: {', '.join(sorted(allowed_suffixes))})"
             )
         collected.append(path)
 
     if not collected:
-        raise ValueError("Aucun fichier compatible trouvé.")
+        raise ValueError("No compatible files found.")
     return collected
 
 
@@ -45,7 +45,7 @@ def _run_strip_exif(args: argparse.Namespace) -> int:
             output_path = _default_output_path(input_path, f".clean{input_path.suffix}")
 
         strip_exif(input_path, output_path, quality=args.quality)
-        print(f"EXIF supprimé : {input_path} -> {output_path}")
+        print(f"EXIF stripped: {input_path} -> {output_path}")
 
     return 0
 
@@ -63,7 +63,7 @@ def _run_convert_heic(args: argparse.Namespace) -> int:
             output_path = _default_output_path(input_path, ".jpg")
 
         convert_heic(input_path, output_path, quality=args.quality)
-        print(f"HEIC converti : {input_path} -> {output_path}")
+        print(f"HEIC converted: {input_path} -> {output_path}")
 
     return 0
 
@@ -71,47 +71,47 @@ def _run_convert_heic(args: argparse.Namespace) -> int:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="limpide",
-        description="Effacement EXIF et conversion HEIC — CLI local, sans stockage.",
+        description="Strip EXIF and convert HEIC — local CLI, nothing stored.",
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     strip_parser = subparsers.add_parser(
         "strip-exif",
-        help="Supprime les métadonnées EXIF d'une image.",
+        help="Remove EXIF metadata from an image.",
     )
-    strip_parser.add_argument("inputs", nargs="+", type=Path, help="Fichiers ou dossiers.")
-    strip_parser.add_argument("-o", "--output", help="Fichier de sortie (un seul fichier).")
+    strip_parser.add_argument("inputs", nargs="+", type=Path, help="Files or directories.")
+    strip_parser.add_argument("-o", "--output", help="Output file (single file only).")
     strip_parser.add_argument(
         "-d",
         "--output-dir",
-        help="Dossier de sortie pour un traitement par lot.",
+        help="Output directory for batch processing.",
     )
     strip_parser.add_argument(
         "-q",
         "--quality",
         type=int,
         default=95,
-        help="Qualité JPEG (1-100, défaut : 95).",
+        help="JPEG quality (1-100, default: 95).",
     )
     strip_parser.set_defaults(handler=_run_strip_exif)
 
     heic_parser = subparsers.add_parser(
         "convert-heic",
-        help="Convertit HEIC/HEIF vers JPEG.",
+        help="Convert HEIC/HEIF to JPEG.",
     )
-    heic_parser.add_argument("inputs", nargs="+", type=Path, help="Fichiers ou dossiers.")
-    heic_parser.add_argument("-o", "--output", help="Fichier de sortie (un seul fichier).")
+    heic_parser.add_argument("inputs", nargs="+", type=Path, help="Files or directories.")
+    heic_parser.add_argument("-o", "--output", help="Output file (single file only).")
     heic_parser.add_argument(
         "-d",
         "--output-dir",
-        help="Dossier de sortie pour un traitement par lot.",
+        help="Output directory for batch processing.",
     )
     heic_parser.add_argument(
         "-q",
         "--quality",
         type=int,
         default=95,
-        help="Qualité JPEG (1-100, défaut : 95).",
+        help="JPEG quality (1-100, default: 95).",
     )
     heic_parser.set_defaults(handler=_run_convert_heic)
 
@@ -124,7 +124,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         return args.handler(args)
     except ValueError as error:
-        print(f"Erreur : {error}", file=sys.stderr)
+        print(f"Error: {error}", file=sys.stderr)
         return 1
 
 

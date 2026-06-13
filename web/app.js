@@ -1,13 +1,22 @@
 /**
- * Limpide — traitement 100 % local.
- * Aucun fetch, aucun stockage, aucun envoi réseau des fichiers utilisateur.
+ * Limpide — 100 % local processing.
+ * No fetch, no storage, no network upload of user files.
  */
 
 const MIME_JPEG = "image/jpeg";
+const DEFAULT_DROPZONE_LABEL = "Drop a file or click to browse";
 
 function setStatus(element, message, kind = "") {
   element.textContent = message;
   element.className = `status${kind ? ` ${kind}` : ""}`;
+}
+
+function setDropzoneLabel(dropzone, label, hasFile = false) {
+  const text = dropzone.querySelector(".dropzone-label");
+  if (text) {
+    text.textContent = label;
+  }
+  dropzone.classList.toggle("has-file", hasFile);
 }
 
 function downloadBlob(blob, filename) {
@@ -35,7 +44,7 @@ async function loadImageFromFile(file) {
     const image = await new Promise((resolve, reject) => {
       const img = new Image();
       img.onload = () => resolve(img);
-      img.onerror = () => reject(new Error("Impossible de lire l'image."));
+      img.onerror = () => reject(new Error("Could not read the image."));
       img.src = url;
     });
     return image;
@@ -53,7 +62,7 @@ async function canvasToJpegBlob(source, width, height, quality = 0.95) {
 
   return new Promise((resolve, reject) => {
     canvas.toBlob(
-      (blob) => (blob ? resolve(blob) : reject(new Error("Échec de l'encodage JPEG."))),
+      (blob) => (blob ? resolve(blob) : reject(new Error("JPEG encoding failed."))),
       MIME_JPEG,
       quality,
     );
@@ -73,7 +82,7 @@ async function stripExif(file) {
 
 async function convertHeicToJpeg(file) {
   if (typeof heic2any !== "function") {
-    throw new Error("Bibliothèque HEIC indisponible.");
+    throw new Error("HEIC library unavailable.");
   }
 
   const result = await heic2any({
@@ -112,11 +121,13 @@ function wireDropzone(dropzone, input, onFile) {
   });
 }
 
-function setupExifPanel() {
-  const status = document.getElementById("exif-status");
-  const download = document.getElementById("exif-download");
+function setupPanel({ dropzoneId, inputId, statusId, downloadId, process, outputSuffix, readyMessage }) {
+  const dropzone = document.getElementById(dropzoneId);
+  const input = document.getElementById(inputId);
+  const status = document.getElementById(statusId);
+  const download = document.getElementById(downloadId);
   let resultBlob = null;
-  let resultName = "image-clean.jpg";
+  let resultName = `output${outputSuffix}`;
 
   download.addEventListener("click", () => {
     if (resultBlob) {
@@ -124,57 +135,40 @@ function setupExifPanel() {
     }
   });
 
-  wireDropzone(
-    document.getElementById("exif-dropzone"),
-    document.getElementById("exif-input"),
-    async (file) => {
-      download.hidden = true;
-      resultBlob = null;
-      setStatus(status, "Traitement local en cours…");
+  wireDropzone(dropzone, input, async (file) => {
+    download.hidden = true;
+    resultBlob = null;
+    setDropzoneLabel(dropzone, file.name, true);
+    setStatus(status, "Processing locally…");
 
-      try {
-        resultBlob = await stripExif(file);
-        resultName = outputName(file.name, ".clean.jpg");
-        setStatus(status, "EXIF retirés — prêt à télécharger.", "ok");
-        download.hidden = false;
-      } catch (error) {
-        setStatus(status, error.message || "Erreur lors du traitement.", "err");
-      }
-    },
-  );
-}
-
-function setupHeicPanel() {
-  const status = document.getElementById("heic-status");
-  const download = document.getElementById("heic-download");
-  let resultBlob = null;
-  let resultName = "image.jpg";
-
-  download.addEventListener("click", () => {
-    if (resultBlob) {
-      downloadBlob(resultBlob, resultName);
+    try {
+      resultBlob = await process(file);
+      resultName = outputName(file.name, outputSuffix);
+      setStatus(status, readyMessage, "ok");
+      download.hidden = false;
+    } catch (error) {
+      setDropzoneLabel(dropzone, DEFAULT_DROPZONE_LABEL, false);
+      setStatus(status, error.message || "Processing failed.", "err");
     }
   });
-
-  wireDropzone(
-    document.getElementById("heic-dropzone"),
-    document.getElementById("heic-input"),
-    async (file) => {
-      download.hidden = true;
-      resultBlob = null;
-      setStatus(status, "Conversion locale en cours…");
-
-      try {
-        resultBlob = await convertHeicToJpeg(file);
-        resultName = outputName(file.name, ".jpg");
-        setStatus(status, "Conversion terminée — prêt à télécharger.", "ok");
-        download.hidden = false;
-      } catch (error) {
-        setStatus(status, error.message || "Erreur lors de la conversion.", "err");
-      }
-    },
-  );
 }
 
-setupExifPanel();
-setupHeicPanel();
+setupPanel({
+  dropzoneId: "exif-dropzone",
+  inputId: "exif-input",
+  statusId: "exif-status",
+  downloadId: "exif-download",
+  process: stripExif,
+  outputSuffix: ".clean.jpg",
+  readyMessage: "EXIF removed — ready to download.",
+});
+
+setupPanel({
+  dropzoneId: "heic-dropzone",
+  inputId: "heic-input",
+  statusId: "heic-status",
+  downloadId: "heic-download",
+  process: convertHeicToJpeg,
+  outputSuffix: ".jpg",
+  readyMessage: "Converted — ready to download.",
+});

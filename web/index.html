@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Effacement EXIF et conversion HEIC en JPEG, dans le navigateur.">
+  <meta name="description" content="Strip EXIF metadata and convert HEIC to JPEG — in your browser, nothing stored.">
   <title>Limpide</title>
   <link rel="stylesheet" href="style.css">
 </head>
@@ -11,33 +11,42 @@
   <main class="page">
     <header>
       <h1>Limpide</h1>
-      <p>Effacement EXIF · HEIC → JPEG</p>
+      <p class="tagline">Strip EXIF · HEIC to JPEG</p>
+      <p class="note">Runs in your browser. Files never leave your device.</p>
     </header>
 
-    <section class="tool">
-      <h2>EXIF</h2>
-      <p class="hint">JPEG, PNG, WebP</p>
-      <label class="dropzone" id="exif-dropzone">
-        <input type="file" id="exif-input" accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp" hidden>
-        <span>Choisir un fichier</span>
-      </label>
-      <p class="status" id="exif-status" aria-live="polite"></p>
-      <button type="button" id="exif-download" hidden>Télécharger</button>
-    </section>
+    <div class="tools">
+      <section class="tool">
+        <div class="tool-head">
+          <h2>Strip EXIF</h2>
+          <p class="hint">JPEG, PNG, WebP</p>
+        </div>
+        <label class="dropzone" id="exif-dropzone">
+          <input type="file" id="exif-input" accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp" hidden>
+          <span class="dropzone-label">Drop a file or click to browse</span>
+        </label>
+        <p class="status" id="exif-status" aria-live="polite"></p>
+        <button type="button" id="exif-download" hidden>Download</button>
+      </section>
 
-    <section class="tool">
-      <h2>HEIC</h2>
-      <p class="hint">Conversion en JPEG</p>
-      <label class="dropzone" id="heic-dropzone">
-        <input type="file" id="heic-input" accept="image/heic,image/heif,.heic,.heif" hidden>
-        <span>Choisir un fichier</span>
-      </label>
-      <p class="status" id="heic-status" aria-live="polite"></p>
-      <button type="button" id="heic-download" hidden>Télécharger</button>
-    </section>
+      <section class="tool">
+        <div class="tool-head">
+          <h2>HEIC to JPEG</h2>
+          <p class="hint">.heic, .heif</p>
+        </div>
+        <label class="dropzone" id="heic-dropzone">
+          <input type="file" id="heic-input" accept="image/heic,image/heif,.heic,.heif" hidden>
+          <span class="dropzone-label">Drop a file or click to browse</span>
+        </label>
+        <p class="status" id="heic-status" aria-live="polite"></p>
+        <button type="button" id="heic-download" hidden>Download</button>
+      </section>
+    </div>
 
     <footer>
-      <a href="https://github.com/thepriben/limpide">thepriben/limpide</a>
+      <a href="https://github.com/thepriben/limpide">Source code</a>
+      <span>·</span>
+      <span>Apache-2.0</span>
     </footer>
   </main>
 

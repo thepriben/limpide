@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "limpide"
 version = "0.2.0"
-description = "Effacement EXIF et conversion HEIC vers JPEG — web client-side et CLI, rien n'est gardé."
+description = "Strip EXIF metadata and convert HEIC to JPEG — client-side web app and CLI."
 readme = "README.md"
 license = { text = "Apache-2.0" }
 requires-python = ">=3.10"

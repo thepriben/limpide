@@ -1,30 +1,30 @@
 #### *Limpide*
 
-Effacement des métadonnées EXIF et conversion HEIC → JPEG. Site web et CLI Python.
+Strip EXIF metadata and convert HEIC to JPEG. Web app and Python CLI.
 
-**Site : [thepriben.github.io/limpide](https://thepriben.github.io/limpide/)**
+**Live site: [thepriben.github.io/limpide](https://thepriben.github.io/limpide/)**
 
 ---
 
 ##### About
 
-Limpide propose deux fonctions simples :
+Limpide provides two functions:
 
-- **strip-exif** — retire les métadonnées embarquées dans une image (GPS, appareil, date, etc.) ;
-- **convert-heic** — convertit un fichier HEIC/HEIF (iPhone, appareils Apple) en JPEG.
+- **strip-exif** — remove embedded metadata from an image (GPS, camera model, timestamps, etc.) ;
+- **convert-heic** — convert a HEIC/HEIF file (iPhone, Apple devices) to JPEG.
 
-Le site web traite les fichiers **dans le navigateur** : rien n'est envoyé à un serveur, rien n'est stocké. Le code source est public ; le traitement est décrit dans `web/app.js` (canvas pour l'EXIF, `heic2any` pour le HEIC). Une CLI Python reprend les mêmes fonctions pour un usage local ou par lot.
+The web app processes files **in the browser**: nothing is uploaded, nothing is stored. Source code is public; processing lives in `web/app.js` (canvas for EXIF, `heic2any` for HEIC). A Python CLI offers the same features for local or batch use.
 
 ##### Structure
 
-| Composant | Rôle |
+| Component | Role |
 |---|---|
-| `web/` | Interface sobre, 100 % client-side, déployée sur GitHub Pages |
-| `limpide/` | CLI Python (Pillow, pillow-heif) |
+| `web/` | Minimal client-side UI, deployed on GitHub Pages |
+| `limpide/` | Python CLI (Pillow, pillow-heif) |
 
-##### Site web
+##### Web app
 
-Déployé automatiquement sur GitHub Pages à chaque push sur `main`.
+Deployed automatically to GitHub Pages on every push to `main`.
 
 ```
 python -m http.server 8080 --directory web
@@ -40,10 +40,10 @@ pip install -e .
 
 ```
 limpide strip-exif photo.jpg
-limpide strip-exif ./dossier/ -d ./sortie/
+limpide strip-exif ./folder/ -d ./output/
 
 limpide convert-heic photo.heic
-limpide convert-heic ./dossier/ -d ./sortie/
+limpide convert-heic ./folder/ -d ./output/
 ```
 
 ##### Tests
@@ -53,6 +53,6 @@ pip install -e ".[dev]"
 pytest
 ```
 
-##### Licence
+##### License
 
 Apache-2.0

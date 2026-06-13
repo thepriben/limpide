@@ -16,12 +16,12 @@ def convert_heic(
     *,
     quality: int = 95,
 ) -> None:
-    """Convertit un fichier HEIC/HEIF vers JPEG."""
+    """Convert a HEIC/HEIF file to JPEG."""
     suffix = input_path.suffix.lower()
     if suffix not in SUPPORTED_HEIC_FORMATS:
         raise ValueError(
-            f"Format non pris en charge pour la conversion HEIC : {suffix}. "
-            f"Formats acceptés : {', '.join(sorted(SUPPORTED_HEIC_FORMATS))}"
+            f"Unsupported format for HEIC conversion: {suffix}. "
+            f"Accepted formats: {', '.join(sorted(SUPPORTED_HEIC_FORMATS))}"
         )
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
