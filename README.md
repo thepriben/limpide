@@ -2,6 +2,8 @@
 
 Effacement EXIF et conversion HEIC → JPEG, avec une preuve vérifiable : **le site web traite tout dans le navigateur**, sans upload ni stockage. Le code est ouvert — on peut auditer chaque ligne.
 
+**Site en ligne : [thepriben.github.io/limpide](https://thepriben.github.io/limpide/)**
+
 ---
 
 ##### Pourquoi « Limpide » ?
@@ -18,7 +20,9 @@ Effacement EXIF et conversion HEIC → JPEG, avec une preuve vérifiable : **le 
 
 ##### Site web (démo publique)
 
-Ouvrir `web/index.html` ou publier sur GitHub Pages :
+**[https://thepriben.github.io/limpide/](https://thepriben.github.io/limpide/)** — déployé via GitHub Pages à chaque push sur `main`.
+
+En local :
 
 ```
 # depuis la racine du dépôt
