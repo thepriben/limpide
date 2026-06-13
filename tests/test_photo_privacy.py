@@ -34,7 +34,7 @@ def test_convert_heic_to_jpeg(tmp_path):
     image.save(buffer, format="HEIF")
     source.write_bytes(buffer.getvalue())
 
-    convert_heic(source, target, output_format="JPEG")
+    convert_heic(source, target)
 
     with Image.open(target) as converted:
         assert converted.format == "JPEG"

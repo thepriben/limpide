@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "photo-privacy"
 version = "0.1.0"
-description = "Suppression des métadonnées EXIF et conversion HEIC vers JPEG/PNG."
+description = "Suppression des métadonnées EXIF et conversion HEIC vers JPEG."
 readme = "README.md"
 license = { text = "Apache-2.0" }
 requires-python = ">=3.10"

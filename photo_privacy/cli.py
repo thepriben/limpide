@@ -53,22 +53,16 @@ def _run_strip_exif(args: argparse.Namespace) -> int:
 def _run_convert_heic(args: argparse.Namespace) -> int:
     inputs = _collect_inputs(args.inputs, SUPPORTED_HEIC_FORMATS)
     output_dir = Path(args.output_dir) if args.output_dir else None
-    output_suffix = ".jpg" if args.format == "jpeg" else ".png"
 
     for input_path in inputs:
         if output_dir:
-            output_path = output_dir / f"{input_path.stem}{output_suffix}"
+            output_path = output_dir / f"{input_path.stem}.jpg"
         elif args.output and len(inputs) == 1:
             output_path = Path(args.output)
         else:
-            output_path = _default_output_path(input_path, output_suffix)
+            output_path = _default_output_path(input_path, ".jpg")
 
-        convert_heic(
-            input_path,
-            output_path,
-            output_format=args.format.upper(),
-            quality=args.quality,
-        )
+        convert_heic(input_path, output_path, quality=args.quality)
         print(f"HEIC converti : {input_path} -> {output_path}")
 
     return 0
@@ -103,7 +97,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     heic_parser = subparsers.add_parser(
         "convert-heic",
-        help="Convertit HEIC/HEIF vers JPEG ou PNG.",
+        help="Convertit HEIC/HEIF vers JPEG.",
     )
     heic_parser.add_argument("inputs", nargs="+", type=Path, help="Fichiers ou dossiers.")
     heic_parser.add_argument("-o", "--output", help="Fichier de sortie (un seul fichier).")
@@ -111,13 +105,6 @@ def build_parser() -> argparse.ArgumentParser:
         "-d",
         "--output-dir",
         help="Dossier de sortie pour un traitement par lot.",
-    )
-    heic_parser.add_argument(
-        "-f",
-        "--format",
-        choices=["jpeg", "png"],
-        default="jpeg",
-        help="Format de sortie (défaut : jpeg).",
     )
     heic_parser.add_argument(
         "-q",
