@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "photo-privacy"
+version = "0.1.0"
+description = "Suppression des métadonnées EXIF et conversion HEIC vers JPEG/PNG."
+readme = "README.md"
+license = { text = "Apache-2.0" }
+requires-python = ">=3.10"
+authors = [{ name = "Benoît Prieur" }]
+dependencies = [
+    "Pillow>=10.0",
+    "pillow-heif>=0.16",
+]
+
+[project.scripts]
+photo-privacy = "photo_privacy.cli:main"
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["photo_privacy*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
