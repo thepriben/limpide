@@ -4,7 +4,7 @@
  */
 
 const MIME_JPEG = "image/jpeg";
-const DEFAULT_DROPZONE_LABEL = "Choose files";
+const DEFAULT_DROPZONE_LABEL = "Drop files here or click to browse";
 const EXIF_EXTENSIONS = new Set([".jpg", ".jpeg", ".png", ".webp"]);
 const HEIC_EXTENSIONS = new Set([".heic", ".heif"]);
 

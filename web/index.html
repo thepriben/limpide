@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Strip EXIF metadata and convert HEIC to JPEG. Browser-based processing, open source.">
-  <title>Limpide</title>
+  <meta name="description" content="Strip EXIF metadata and convert HEIC to JPEG in your browser. Open source, nothing uploaded.">
+  <title>Limpide — Strip EXIF, Convert HEIC to JPEG</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -13,19 +13,19 @@
       <h1>Limpide</h1>
       <p class="intro">
         Two tools: remove EXIF metadata from images, and convert HEIC/HEIF to JPEG.
-        Processing runs locally in the browser. Files are not uploaded, stored, or sent to a server.
+        Processing runs locally in your browser. Files are not uploaded, stored, or sent to a server.
         The <a href="https://github.com/thepriben/limpide/blob/main/web/app.js">source code</a>
-        is public and can be audited to confirm this behaviour.
+        is public and can be audited to confirm this behavior.
       </p>
     </header>
 
     <div class="tools">
       <section class="tool">
         <h2>Strip EXIF</h2>
-        <p class="hint">JPEG, PNG, WebP — multiple files supported</p>
+        <p class="hint">JPEG, PNG, WebP · multiple files</p>
         <label class="dropzone" id="exif-dropzone">
           <input type="file" id="exif-input" accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp" multiple hidden>
-          <span class="dropzone-label">Choose files</span>
+          <span class="dropzone-label">Drop files here or click to browse</span>
         </label>
         <ul class="file-list" id="exif-files" hidden></ul>
         <p class="status" id="exif-status" aria-live="polite"></p>
@@ -34,10 +34,10 @@
 
       <section class="tool">
         <h2>HEIC to JPEG</h2>
-        <p class="hint">.heic, .heif — multiple files supported</p>
+        <p class="hint">.heic, .heif · multiple files</p>
         <label class="dropzone" id="heic-dropzone">
           <input type="file" id="heic-input" accept="image/heic,image/heif,.heic,.heif" multiple hidden>
-          <span class="dropzone-label">Choose files</span>
+          <span class="dropzone-label">Drop files here or click to browse</span>
         </label>
         <ul class="file-list" id="heic-files" hidden></ul>
         <p class="status" id="heic-status" aria-live="polite"></p>
