@@ -90,6 +90,8 @@ const VIEWER_LABELS = {
 };
 const EXIF_EXTENSIONS = new Set([".jpg", ".jpeg", ".png", ".webp"]);
 const HEIC_EXTENSIONS = new Set([".heic", ".heif"]);
+const ZIMMY_EXTENSIONS = new Set([".jpg", ".jpeg"]);
+const EXIF_DATE_PATTERN = /^(\d{4}):(\d{2}):(\d{2}) (\d{2}):(\d{2}):(\d{2})$/;
 
 const ERROR_MESSAGES = [
   ["Bibliothèque HEIC indisponible", "HEIC library failed to load. Please refresh the page."],
@@ -931,8 +933,429 @@ function setupPanel({
   });
 }
 
+function bufferToBinaryString(buffer) {
+  const bytes = new Uint8Array(buffer);
+  const chunkSize = 0x8000;
+  let binary = "";
+  for (let offset = 0; offset < bytes.length; offset += chunkSize) {
+    const chunk = bytes.subarray(offset, offset + chunkSize);
+    binary += String.fromCharCode(...chunk);
+  }
+  return binary;
+}
+
+function binaryStringToBytes(binary) {
+  const output = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index += 1) {
+    output[index] = binary.charCodeAt(index);
+  }
+  return output;
+}
+
+function asExifText(value) {
+  if (value === undefined || value === null) {
+    return "";
+  }
+  if (value instanceof Uint8Array) {
+    return String.fromCharCode(...value).replace(/\0+$/, "").trim();
+  }
+  return String(value).replace(/\0+$/, "").trim();
+}
+
+function parseExifDate(value) {
+  const match = asExifText(value).match(EXIF_DATE_PATTERN);
+  if (!match) {
+    return null;
+  }
+  return new Date(
+    Number(match[1]),
+    Number(match[2]) - 1,
+    Number(match[3]),
+    Number(match[4]),
+    Number(match[5]),
+    Number(match[6]),
+  );
+}
+
+function formatExifDate(value) {
+  const pad = (part) => String(part).padStart(2, "0");
+  return [
+    `${value.getFullYear()}:${pad(value.getMonth() + 1)}:${pad(value.getDate())}`,
+    `${pad(value.getHours())}:${pad(value.getMinutes())}:${pad(value.getSeconds())}`,
+  ].join(" ");
+}
+
+function formatDisplayDate(value) {
+  if (!value) {
+    return "No EXIF date";
+  }
+  return formatExifDate(value).replace(/:/g, (char, index) => (index < 10 ? "-" : char));
+}
+
+function applyDateAdjustments(value, newDate, shiftSeconds) {
+  const year = newDate ? newDate.getFullYear() : value.getFullYear();
+  const month = newDate ? newDate.getMonth() : value.getMonth();
+  const day = newDate ? newDate.getDate() : value.getDate();
+  const utc = Date.UTC(
+    year,
+    month,
+    day,
+    value.getHours(),
+    value.getMinutes(),
+    value.getSeconds(),
+  ) + shiftSeconds * 1000;
+  const shifted = new Date(utc);
+  return new Date(
+    shifted.getUTCFullYear(),
+    shifted.getUTCMonth(),
+    shifted.getUTCDate(),
+    shifted.getUTCHours(),
+    shifted.getUTCMinutes(),
+    shifted.getUTCSeconds(),
+  );
+}
+
+function parseDateInput(value) {
+  if (!value) {
+    return null;
+  }
+  const [year, month, day] = value.split("-").map(Number);
+  if (!year || !month || !day) {
+    return null;
+  }
+  return new Date(year, month - 1, day);
+}
+
+function readDirectoryEntries(reader) {
+  return new Promise((resolve, reject) => {
+    const entries = [];
+
+    function readBatch() {
+      reader.readEntries((batch) => {
+        if (!batch.length) {
+          resolve(entries);
+          return;
+        }
+        entries.push(...batch);
+        readBatch();
+      }, reject);
+    }
+
+    readBatch();
+  });
+}
+
+function entryToFile(entry) {
+  return new Promise((resolve, reject) => {
+    entry.file(resolve, reject);
+  });
+}
+
+async function collectFromEntry(entry, files) {
+  if (entry.isFile) {
+    if (!entry.name.startsWith(".")) {
+      files.push(await entryToFile(entry));
+    }
+    return;
+  }
+  if (!entry.isDirectory) {
+    return;
+  }
+
+  const children = await readDirectoryEntries(entry.createReader());
+  for (const child of children) {
+    await collectFromEntry(child, files);
+  }
+}
+
+async function collectDroppedFiles(dataTransfer) {
+  const items = dataTransfer?.items;
+  if (!items?.length) {
+    return Array.from(dataTransfer?.files ?? []);
+  }
+
+  const entries = [];
+  for (const item of items) {
+    const entry = item.webkitGetAsEntry?.();
+    if (entry) {
+      entries.push(entry);
+    }
+  }
+  if (!entries.length) {
+    return Array.from(dataTransfer.files ?? []);
+  }
+
+  const files = [];
+  for (const entry of entries) {
+    await collectFromEntry(entry, files);
+  }
+  return files;
+}
+
+function firstPhotoDate(dates, fallback) {
+  return dates.dateTimeOriginal || dates.dateTimeDigitized || dates.dateTime || fallback;
+}
+
+function readZimmyDates(exifObj) {
+  return {
+    dateTime: parseExifDate(exifObj["0th"]?.[piexif.ImageIFD.DateTime]),
+    dateTimeOriginal: parseExifDate(exifObj.Exif?.[piexif.ExifIFD.DateTimeOriginal]),
+    dateTimeDigitized: parseExifDate(exifObj.Exif?.[piexif.ExifIFD.DateTimeDigitized]),
+  };
+}
+
+function writeZimmyDates(exifObj, dates, fallback, newDate, shiftSeconds) {
+  const tags = [
+    ["0th", piexif.ImageIFD.DateTime, dates.dateTime],
+    ["Exif", piexif.ExifIFD.DateTimeOriginal, dates.dateTimeOriginal],
+    ["Exif", piexif.ExifIFD.DateTimeDigitized, dates.dateTimeDigitized],
+  ];
+
+  let wrote = false;
+  let primary = null;
+
+  for (const [ifdName, tag, current] of tags) {
+    if (!current) {
+      continue;
+    }
+    const updated = applyDateAdjustments(current, newDate, shiftSeconds);
+    exifObj[ifdName] = exifObj[ifdName] || {};
+    exifObj[ifdName][tag] = formatExifDate(updated);
+    wrote = true;
+    if (!primary) {
+      primary = updated;
+    }
+  }
+
+  if (!wrote) {
+    primary = applyDateAdjustments(fallback, newDate, shiftSeconds);
+    const stamp = formatExifDate(primary);
+    exifObj["0th"] = exifObj["0th"] || {};
+    exifObj.Exif = exifObj.Exif || {};
+    exifObj["0th"][piexif.ImageIFD.DateTime] = stamp;
+    exifObj.Exif[piexif.ExifIFD.DateTimeOriginal] = stamp;
+    exifObj.Exif[piexif.ExifIFD.DateTimeDigitized] = stamp;
+  }
+
+  return primary;
+}
+
+function previewZimmyItem(item, newDate, shiftSeconds) {
+  const source = firstPhotoDate(item.dates, item.fallback);
+  return applyDateAdjustments(source, newDate, shiftSeconds);
+}
+
+async function loadZimmyItem(file, piexif) {
+  const buffer = await file.arrayBuffer();
+  const exifObj = piexif.load(bufferToBinaryString(buffer));
+  const dates = readZimmyDates(exifObj);
+  const fallback = new Date(file.lastModified);
+  return {
+    file,
+    buffer,
+    dates,
+    fallback,
+    current: firstPhotoDate(dates, fallback),
+  };
+}
+
+function setupZimmyGpx() {
+  const dropzone = document.getElementById("zimmy-dropzone");
+  const input = document.getElementById("zimmy-input");
+  const folderInput = document.getElementById("zimmy-folder");
+  const folderButton = document.getElementById("zimmy-folder-btn");
+  const controls = document.getElementById("zimmy-controls");
+  const dateInput = document.getElementById("zimmy-date");
+  const secondsInput = document.getElementById("zimmy-seconds");
+  const minusButton = document.getElementById("zimmy-minus");
+  const plusButton = document.getElementById("zimmy-plus");
+  const resetButton = document.getElementById("zimmy-reset");
+  const offset = document.getElementById("zimmy-offset");
+  const tableWrap = document.getElementById("zimmy-table-wrap");
+  const rows = document.getElementById("zimmy-rows");
+  const status = document.getElementById("zimmy-status");
+  const download = document.getElementById("zimmy-download");
+
+  let items = [];
+  let shiftSeconds = 0;
+
+  function selectedDate() {
+    return parseDateInput(dateInput.value);
+  }
+
+  function shiftStep() {
+    const value = Number(secondsInput.value);
+    return Number.isFinite(value) && value > 0 ? Math.round(value) : 0;
+  }
+
+  function renderPreview() {
+    const newDate = selectedDate();
+    rows.innerHTML = "";
+
+    for (const item of items) {
+      const row = document.createElement("tr");
+      const nameCell = document.createElement("td");
+      const currentCell = document.createElement("td");
+      const nextCell = document.createElement("td");
+      nameCell.textContent = item.file.name;
+      currentCell.textContent = formatDisplayDate(item.current);
+      nextCell.textContent = formatDisplayDate(previewZimmyItem(item, newDate, shiftSeconds));
+      row.append(nameCell, currentCell, nextCell);
+      rows.appendChild(row);
+    }
+
+    tableWrap.hidden = !items.length;
+    const dateLabel = newDate ? dateInput.value : "original dates";
+    const sign = shiftSeconds > 0 ? "+" : "";
+    offset.textContent = `${items.length} photo${items.length > 1 ? "s" : ""} · ${dateLabel} · ${sign}${shiftSeconds} s`;
+    offset.hidden = !items.length;
+    controls.hidden = !items.length;
+    download.hidden = !items.length;
+    download.textContent = items.length > 1 ? "Download ZIP" : "Download";
+  }
+
+  function resetAdjustments() {
+    shiftSeconds = 0;
+    dateInput.value = "";
+    renderPreview();
+  }
+
+  async function loadFiles(fileList) {
+    const files = collectFilesFromInput(fileList, ZIMMY_EXTENSIONS)
+      .filter((file) => !file.name.startsWith("."))
+      .sort((left, right) => left.name.localeCompare(right.name, undefined, { numeric: true }));
+
+    items = [];
+    input.value = "";
+    folderInput.value = "";
+    download.hidden = true;
+    resetAdjustments();
+
+    if (!files.length) {
+      setDropzoneLabel(dropzone, "Drop a folder or photos here, or click to browse", false);
+      renderPreview();
+      setStatus(status, "No JPEG files selected.", "err");
+      return;
+    }
+
+    setDropzoneLabel(
+      dropzone,
+      `${files.length} photo${files.length > 1 ? "s" : ""} selected`,
+      true,
+    );
+    setStatus(status, "Reading dates…");
+
+    try {
+      const piexif = await ensurePiexif();
+      const loaded = [];
+      for (let index = 0; index < files.length; index += 1) {
+        setStatus(status, `Reading ${index + 1}/${files.length}: ${files[index].name}`);
+        loaded.push(await loadZimmyItem(files[index], piexif));
+      }
+      items = loaded;
+      renderPreview();
+      setStatus(status, `${items.length} photo${items.length > 1 ? "s" : ""} ready.`, "ok");
+    } catch (error) {
+      items = [];
+      setDropzoneLabel(dropzone, "Drop a folder or photos here, or click to browse", false);
+      renderPreview();
+      setStatus(status, formatError(error), "err");
+    }
+  }
+
+  folderButton.addEventListener("click", () => {
+    folderInput.click();
+  });
+
+  dateInput.addEventListener("change", renderPreview);
+  minusButton.addEventListener("click", () => {
+    const step = shiftStep();
+    if (!step) {
+      setStatus(status, "Enter a positive number of seconds.", "err");
+      return;
+    }
+    shiftSeconds -= step;
+    renderPreview();
+    setStatus(status, `Shifted all photos by −${step} s.`, "ok");
+  });
+  plusButton.addEventListener("click", () => {
+    const step = shiftStep();
+    if (!step) {
+      setStatus(status, "Enter a positive number of seconds.", "err");
+      return;
+    }
+    shiftSeconds += step;
+    renderPreview();
+    setStatus(status, `Shifted all photos by +${step} s.`, "ok");
+  });
+  resetButton.addEventListener("click", () => {
+    resetAdjustments();
+    setStatus(status, "Date and shift reset.", "ok");
+  });
+
+  download.addEventListener("click", async () => {
+    if (!items.length) {
+      return;
+    }
+    const newDate = selectedDate();
+    if (!newDate && !shiftSeconds) {
+      setStatus(status, "Set a date or shift the photos first.", "err");
+      return;
+    }
+
+    try {
+      const piexif = await ensurePiexif();
+      const results = [];
+      for (let index = 0; index < items.length; index += 1) {
+        const item = items[index];
+        setStatus(status, `Writing ${index + 1}/${items.length}: ${item.file.name}`);
+        const binary = bufferToBinaryString(item.buffer);
+        const exifObj = piexif.load(binary);
+        writeZimmyDates(exifObj, item.dates, item.fallback, newDate, shiftSeconds);
+        const updated = piexif.insert(piexif.dump(exifObj), binary);
+        results.push({
+          name: item.file.name,
+          blob: new Blob([binaryStringToBytes(updated)], { type: MIME_JPEG }),
+        });
+      }
+      await downloadResults(results, "zimmypgx.zip");
+      setStatus(status, `${results.length} photo${results.length > 1 ? "s" : ""} ready.`, "ok");
+    } catch (error) {
+      setStatus(status, formatError(error), "err");
+    }
+  });
+
+  dropzone.addEventListener("dragover", (event) => {
+    event.preventDefault();
+    dropzone.classList.add("dragover");
+  });
+  dropzone.addEventListener("dragleave", () => {
+    dropzone.classList.remove("dragover");
+  });
+  dropzone.addEventListener("drop", async (event) => {
+    event.preventDefault();
+    dropzone.classList.remove("dragover");
+    try {
+      await loadFiles(await collectDroppedFiles(event.dataTransfer));
+    } catch (error) {
+      setStatus(status, formatError(error), "err");
+    }
+  });
+  input.addEventListener("change", () => {
+    if (input.files?.length) {
+      loadFiles(input.files);
+    }
+  });
+  folderInput.addEventListener("change", () => {
+    if (folderInput.files?.length) {
+      loadFiles(folderInput.files);
+    }
+  });
+}
+
 async function init() {
   setupExifViewer();
+  setupZimmyGpx();
 
   setupPanel({
     dropzoneId: "exif-dropzone",

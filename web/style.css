@@ -198,3 +198,88 @@ button {
 button:hover {
   border-color: #888;
 }
+
+button.secondary {
+  width: auto;
+  margin-top: 0.45rem;
+  background: transparent;
+}
+
+.zimmy-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem 1rem;
+  align-items: flex-end;
+  margin-top: 0.75rem;
+}
+
+.zimmy-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.zimmy-field label {
+  font-size: 0.75rem;
+  color: #666;
+}
+
+.zimmy-field input {
+  font: inherit;
+  font-size: 0.8125rem;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid #bbb;
+  background: #fff;
+}
+
+.zimmy-field input[type="number"] {
+  width: 6.5rem;
+}
+
+.zimmy-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.zimmy-actions button,
+.zimmy-bar button {
+  width: auto;
+  margin-top: 0;
+}
+
+.zimmy-offset {
+  margin: 0.55rem 0 0;
+  font-size: 0.8125rem;
+  color: #444;
+}
+
+.zimmy-table-wrap {
+  max-height: 16rem;
+  overflow: auto;
+  margin-top: 0.75rem;
+  border: 1px solid #eee;
+}
+
+.zimmy-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.75rem;
+}
+
+.zimmy-table th,
+.zimmy-table td {
+  text-align: left;
+  padding: 0.35rem 0.5rem;
+  border-bottom: 1px solid #eee;
+  vertical-align: top;
+}
+
+.zimmy-table th {
+  color: #666;
+  font-weight: 500;
+}
+
+.zimmy-table td:first-child {
+  word-break: break-all;
+}

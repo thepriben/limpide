@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import argparse
 import sys
+from datetime import date
 from pathlib import Path
 
 from limpide.exif import SUPPORTED_EXIF_FORMATS, strip_exif
 from limpide.heic import SUPPORTED_HEIC_FORMATS, convert_heic
+from limpide.zimmy import SUPPORTED_ZIMMY_FORMATS, adjust_photo_dates, format_exif_datetime
 
 
 def _default_output_path(input_path: Path, suffix: str) -> Path:
@@ -68,10 +70,50 @@ def _run_convert_heic(args: argparse.Namespace) -> int:
     return 0
 
 
+def _parse_iso_date(value: str) -> date:
+    try:
+        return date.fromisoformat(value)
+    except ValueError as error:
+        raise argparse.ArgumentTypeError(
+            f"Invalid date {value!r}. Use YYYY-MM-DD."
+        ) from error
+
+
+def _run_zimmy_gpx(args: argparse.Namespace) -> int:
+    if args.date is None and not args.shift:
+        raise ValueError("Provide --date YYYY-MM-DD and/or a non-zero --shift.")
+
+    inputs = _collect_inputs(args.inputs, SUPPORTED_ZIMMY_FORMATS)
+    output_dir = Path(args.output_dir) if args.output_dir else None
+
+    for input_path in inputs:
+        if args.in_place:
+            output_path = input_path
+        elif output_dir:
+            output_path = output_dir / input_path.name
+        elif args.output and len(inputs) == 1:
+            output_path = Path(args.output)
+        else:
+            output_path = _default_output_path(input_path, f".zimmy{input_path.suffix}")
+
+        updated = adjust_photo_dates(
+            input_path,
+            output_path,
+            new_date=args.date,
+            shift_seconds=args.shift,
+        )
+        print(
+            f"ZimmyGpx: {input_path} -> {output_path} "
+            f"({format_exif_datetime(updated)})"
+        )
+
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="limpide",
-        description="Strip EXIF and convert HEIC — local CLI, nothing stored.",
+        description="Strip EXIF, convert HEIC, and shift photo dates — local CLI.",
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
@@ -114,6 +156,35 @@ def build_parser() -> argparse.ArgumentParser:
         help="JPEG quality (1-100, default: 95).",
     )
     heic_parser.set_defaults(handler=_run_convert_heic)
+
+    zimmy_parser = subparsers.add_parser(
+        "zimmy-gpx",
+        help="Change or shift EXIF dates on a folder of JPEGs (no GPX file).",
+    )
+    zimmy_parser.add_argument("inputs", nargs="+", type=Path, help="Files or directories.")
+    zimmy_parser.add_argument("-o", "--output", help="Output file (single file only).")
+    zimmy_parser.add_argument(
+        "-d",
+        "--output-dir",
+        help="Output directory for batch processing.",
+    )
+    zimmy_parser.add_argument(
+        "--in-place",
+        action="store_true",
+        help="Overwrite the original files.",
+    )
+    zimmy_parser.add_argument(
+        "--date",
+        type=_parse_iso_date,
+        help="Set the calendar date on every photo (YYYY-MM-DD). Times are kept.",
+    )
+    zimmy_parser.add_argument(
+        "--shift",
+        type=int,
+        default=0,
+        help="Add or subtract this many seconds on every photo (negative allowed).",
+    )
+    zimmy_parser.set_defaults(handler=_run_zimmy_gpx)
 
     return parser
 

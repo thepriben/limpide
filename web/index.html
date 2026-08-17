@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="View, strip EXIF metadata and convert HEIC to JPEG in your browser. Open source, nothing uploaded.">
-  <title>Limpide — EXIF viewer, stripper, HEIC to JPEG</title>
+  <meta name="description" content="View, strip EXIF, convert HEIC to JPEG, and shift photo dates in your browser. Open source, nothing uploaded.">
+  <title>Limpide — EXIF viewer, stripper, HEIC to JPEG, ZimmyGpx</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -15,7 +15,7 @@
         <a class="github-link" href="https://github.com/thepriben/limpide">GitHub</a>
       </div>
       <p class="intro">
-        View EXIF metadata, remove it from images, or convert HEIC/HEIF to JPEG.
+        View EXIF metadata, remove it from images, convert HEIC/HEIF to JPEG, or shift dates on a folder of photos.
         Processing runs locally in your browser. Files are not uploaded, stored, or sent to a server.
         The <a href="https://github.com/thepriben/limpide/blob/main/web/app.js">source code</a>
         is public and can be audited to confirm this behavior.
@@ -56,6 +56,47 @@
         <ul class="file-list" id="heic-files" hidden></ul>
         <p class="status" id="heic-status" aria-live="polite"></p>
         <button type="button" id="heic-download" hidden>Download</button>
+      </section>
+
+      <section class="tool tool-wide">
+        <h2>ZimmyGpx</h2>
+        <p class="hint">JPEG · a folder of photos · set the date or shift every file by seconds · no GPX file needed</p>
+        <label class="dropzone" id="zimmy-dropzone">
+          <input type="file" id="zimmy-input" accept="image/jpeg,.jpg,.jpeg" multiple hidden>
+          <span class="dropzone-label">Drop a folder or photos here, or click to browse</span>
+        </label>
+        <input type="file" id="zimmy-folder" accept="image/jpeg,.jpg,.jpeg" webkitdirectory directory hidden>
+        <button type="button" id="zimmy-folder-btn" class="secondary">Choose folder</button>
+        <div class="zimmy-bar" id="zimmy-controls" hidden>
+          <div class="zimmy-field">
+            <label for="zimmy-date">Set date</label>
+            <input type="date" id="zimmy-date">
+          </div>
+          <div class="zimmy-field">
+            <label for="zimmy-seconds">Seconds</label>
+            <input type="number" id="zimmy-seconds" value="30" min="1" step="1">
+          </div>
+          <div class="zimmy-actions">
+            <button type="button" id="zimmy-minus">− seconds</button>
+            <button type="button" id="zimmy-plus">+ seconds</button>
+            <button type="button" id="zimmy-reset" class="secondary">Reset</button>
+          </div>
+        </div>
+        <p class="zimmy-offset" id="zimmy-offset" hidden></p>
+        <div class="zimmy-table-wrap" id="zimmy-table-wrap" hidden>
+          <table class="zimmy-table">
+            <thead>
+              <tr>
+                <th>File</th>
+                <th>Current</th>
+                <th>New</th>
+              </tr>
+            </thead>
+            <tbody id="zimmy-rows"></tbody>
+          </table>
+        </div>
+        <p class="status" id="zimmy-status" aria-live="polite"></p>
+        <button type="button" id="zimmy-download" hidden>Download</button>
       </section>
     </div>
   </main>

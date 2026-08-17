@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "limpide"
-version = "0.2.0"
-description = "View, strip EXIF metadata and convert HEIC to JPEG — browser app and CLI."
+version = "0.3.0"
+description = "View, strip EXIF, convert HEIC, and shift photo dates — browser app and CLI."
 readme = "README.md"
 license = { text = "Apache-2.0" }
 requires-python = ">=3.10"
@@ -13,6 +13,7 @@ authors = [{ name = "Benoît Prieur" }]
 dependencies = [
     "Pillow>=10.0",
     "pillow-heif>=0.16",
+    "piexif>=1.1.3",
 ]
 
 [project.scripts]
