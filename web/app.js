@@ -1174,7 +1174,7 @@ function setupZimmyGpx() {
   const tableWrap = document.getElementById("zimmy-table-wrap");
   const rows = document.getElementById("zimmy-rows");
   const status = document.getElementById("zimmy-status");
-  const download = document.getElementById("zimmy-download");
+  const runButton = document.getElementById("zimmy-run");
 
   let items = [];
   let shiftSeconds = 0;
@@ -1210,8 +1210,8 @@ function setupZimmyGpx() {
     offset.textContent = `${items.length} photo${items.length > 1 ? "s" : ""} · ${dateLabel} · ${sign}${shiftSeconds} s`;
     offset.hidden = !items.length;
     controls.hidden = !items.length;
-    download.hidden = !items.length;
-    download.textContent = items.length > 1 ? "Download ZIP" : "Download";
+    runButton.hidden = !items.length;
+    runButton.textContent = "Run";
   }
 
   function resetAdjustments() {
@@ -1228,7 +1228,7 @@ function setupZimmyGpx() {
     items = [];
     input.value = "";
     folderInput.value = "";
-    download.hidden = true;
+    runButton.hidden = true;
     resetAdjustments();
 
     if (!files.length) {
@@ -1293,7 +1293,7 @@ function setupZimmyGpx() {
     setStatus(status, "Date and shift reset.", "ok");
   });
 
-  download.addEventListener("click", async () => {
+  runButton.addEventListener("click", async () => {
     if (!items.length) {
       return;
     }
@@ -1303,12 +1303,13 @@ function setupZimmyGpx() {
       return;
     }
 
+    runButton.disabled = true;
     try {
       const piexif = await ensurePiexif();
       const results = [];
       for (let index = 0; index < items.length; index += 1) {
         const item = items[index];
-        setStatus(status, `Writing ${index + 1}/${items.length}: ${item.file.name}`);
+        setStatus(status, `Running ${index + 1}/${items.length}: ${item.file.name}`);
         const binary = bufferToBinaryString(item.buffer);
         const exifObj = piexif.load(binary);
         writeZimmyDates(exifObj, item.dates, item.fallback, newDate, shiftSeconds);
@@ -1319,9 +1320,15 @@ function setupZimmyGpx() {
         });
       }
       await downloadResults(results, "zimmypgx.zip");
-      setStatus(status, `${results.length} photo${results.length > 1 ? "s" : ""} ready.`, "ok");
+      setStatus(
+        status,
+        `Run finished: ${results.length} photo${results.length > 1 ? "s" : ""} downloaded.`,
+        "ok",
+      );
     } catch (error) {
       setStatus(status, formatError(error), "err");
+    } finally {
+      runButton.disabled = false;
     }
   });
 

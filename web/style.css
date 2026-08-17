@@ -199,6 +199,11 @@ button:hover {
   border-color: #888;
 }
 
+button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 button.secondary {
   width: auto;
   margin-top: 0.45rem;
